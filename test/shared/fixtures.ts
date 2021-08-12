@@ -114,7 +114,7 @@ const uniswapFixture: Fixture<UniswapFixture> =
   const uniswapV2PairGTON_USDC = uniswapV2PairFactory.attach(pairAddressGTON_USDC) as UniswapV2Pair
 
   liquidityGTON = expandTo18Decimals(10)
-  let liquidityUSDC = expandTo18Decimals(20)
+  let liquidityUSDC = expandTo18Decimals(50)
   await gton.approve(uniswapV2Router01.address, liquidityGTON)
   await usdc.approve(uniswapV2Router01.address, liquidityUSDC)
   block = await wallet.provider.getBlock("latest")

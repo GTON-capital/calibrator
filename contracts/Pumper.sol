@@ -8,4 +8,6 @@ contract Pumper is IPumper {
 
     constructor() {
     }
+
+    function pump(uint256 amountLP, uint256 gtonBuyback, address to) external {}
 }
