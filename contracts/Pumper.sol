@@ -7,10 +7,10 @@ import "./interfaces/IPumper.sol";
 /// @title Pumper
 contract Pumper is IPumper {
 
-    address owner;
-    IERC20 gton;
-    IUniswapV2Router01 router;
-    string memory VERSION;
+    address public owner;
+    IERC20 public gton;
+    IUniswapV2Router01 public router;
+    string public VERSION;
 
     constructor(
         IERC20 _gton,
@@ -18,9 +18,9 @@ contract Pumper is IPumper {
         string memory _VERSION
     ) {
         owner = msg.sender;
-        VERSTION = _VERSION;
         gton = _gton;
         router = _router;
+        VERSION = _VERSION;
     }
 
     function setOwner(address _owner) external {

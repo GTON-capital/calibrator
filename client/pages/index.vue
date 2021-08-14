@@ -3,19 +3,25 @@
     <div>
       <div>
         <Button class='button--green' size="large" ghost @click="update">Update</Button>
-        <div> Pool GTON-USDC, {{ formatETHBalance(safeLiquidity_GTON_USDC) }} LP on safe</div>
+        <div> Pool GTON-USDC</div>
+        <div> Total supply: {{ totalSupplyGTON_USDC }},
+              LP on safe: {{ safeLiquidityGTON_USDC }}</div>
+        <br>
         <div> Current state</div>
-        <div> Reserve GTON: {{ formatETHBalance(reserveGTON_GTON_USDC) }}USDC</div>
-        <div> Reserve USDC: {{ formatAmountToPrecision(reserveUSDC_GTON_USDC, 6) }}GTON</div>
-        <div> Price: 1 GTON = {{ priceGTON_USDC }}USDC</div>
+        <div> Reserve GTON: {{ formatUnits(reserveGTON_GTON_USDC, 18) }}</div>
+        <div> Reserve USDC: {{ formatUnits(reserveUSDC_GTON_USDC, 6) }}</div>
+        <div> Price: 1 GTON = {{ priceGTON_USDC }} USDC</div>
+        <br>
         <div> Estimated state</div>
-        <div> Reserve GTON: {{ reserveGTON_GTON_USDC_new }}GTON</div>
-        <div> Reserve USDC: {{ reserveUSDC_GTON_USDC_new }}USDC</div>
-        <div> Price: 1 GTON = {{ priceGTON_USDC_new }}USDC</div>
-        <div> GTON back: {{ gtonbackGTON_USDC }}GTON</div>
-        <input v-model="liquidityGTON_USDC" placeholder="GTON_USDC lp tokens">
-        <input v-model="buybackGTON_USDC" placeholder="buyback GTON">
+        <div> Reserve GTON: {{ formatUnits(reserveGTON_GTON_USDC_new, 18) }}</div>
+        <div> Reserve USDC: {{ formatUnits(reserveUSDC_GTON_USDC_new, 6) }}</div>
+        <div> Price: 1 GTON = {{ priceGTON_USDC_new }} USDC</div>
+        <div> GTON back: {{ formatUnits(gtonbackGTON_USDC, 18) }}</div>
+        <br>
+        <div> Liquidity: <input v-model="liquidityGTON_USDC" placeholder="GTON_USDC lp tokens"></div>
+        <div> Buyback: <input v-model="buybackGTON_USDC" placeholder="buyback GTON"></div>
         <Button class='button--green' size="large" ghost @click="estimate">Estimate</Button>
+        <div> {{ error }}</div>
       </div>
     </div>
   </div>
@@ -27,68 +33,71 @@
  import Invoker from '../services/web3.ts'
  import { C } from '../services/constants.ts'
 
- function formatETHBalance(amount: BigNumber): string {
-     return ethers.utils.formatUnits(amount, "ether");
- }
- function formatAmountToPrecision(
-     value: BigNumber,
-     precision: number
- ): string {
-     s = value.toString()
-     let dotAt = s.indexOf(".");
-     return dotAt !== -1 ? s.slice(0, ++dotAt + precision) : s;
- }
-
  export default Vue.extend({
      data () {
          return {
              invoker: {},
-             safeLiquidity_GTON_USDC: "",
-             reserveGTON_GTON_USDC: "",
-             reserveUSDC_GTON_USDC: "",
-             priceGTON_USDC: "",
-             reserveGTON_GTON_USDC_new: "",
-             reserveUSDC_GTON_USDC_new: "",
-             priceGTON_USDC_new: "",
-             liquidityGTON_USDC: "",
-             buybackGTON_USDC: "",
-             gtonbackGTON_USDC: ""
+             safeLiquidityGTON_USDC: BigNumber.from(0),
+             totalSupplyGTON_USDC: BigNumber.from(0),
+             reserveGTON_GTON_USDC: BigNumber.from(0),
+             reserveUSDC_GTON_USDC: BigNumber.from(0),
+             priceGTON_USDC: BigNumber.from(0),
+             reserveGTON_GTON_USDC_new: BigNumber.from(0),
+             reserveUSDC_GTON_USDC_new: BigNumber.from(0),
+             priceGTON_USDC_new: BigNumber.from(0),
+             gtonbackGTON_USDC: BigNumber.from(0),
+             liquidityGTON_USDC: "10000000000000000",
+             buybackGTON_USDC: "300000000000000000000",
+             error: ""
          }
      },
-
      async mounted () {
          await this.connect()
+         await this.update()
      },
-
      methods: {
          async connect () {
-             const provider = new ethers.providers.JsonRpcProvider("https://matic-mainnet.chainstacklabs.com")
-             this.invoker = new Invoker(provider)
+             this.invoker = new Invoker()
              console.log("Invoker loaded:", this.invoker)
          },
-         clear () {
-             this.safeLiquidity_GTON_USDC = ""
-             this.reserveGTON_GTON_USDC = ""
-             this.reserveUSDC_GTON_USDC = ""
-             this.priceGTON_USDC = ""
-             this.reserveGTON_GTON_USDC_new = ""
-             this.reserveUSDC_GTON_USDC_new = ""
-             this.priceGTON_USDC_new = ""
-             this.gtonbackGTON_USDC = ""
-         },
          async update () {
-             this.clear()
-             this.safeLiquidity_GTON_USDC = await this.invoker.safeLiquidity(C.quick_pool_GTON_USDC)
+             // clear so that errors are evident
+             this.safeLiquidity_GTON_USDC = BigNumber.from(0)
+             this.reserveGTON_GTON_USDC = BigNumber.from(0)
+             this.reserveUSDC_GTON_USDC = BigNumber.from(0)
+             this.priceGTON_USDC = BigNumber.from(0)
+
+             this.safeLiquidityGTON_USDC = await this.invoker.safeLiquidity(C.quick_pool_GTON_USDC)
+             this.totalSupplyGTON_USDC = await this.invoker.totalSupply(C.quick_pool_GTON_USDC)
              this.reserveGTON_GTON_USDC = await this.invoker.reserve(C.quick_pool_GTON_USDC, C.gton)
              this.reserveUSDC_GTON_USDC = await this.invoker.reserve(C.quick_pool_GTON_USDC, C.usdc)
-             this.priceGTON_USDC = this.reserveUSDC_GTON_USDC.div(this.reserveGTON_GTON_USDC)
+             if (this.reserveGTON_GTON_USDC != 0) {
+                 this.priceGTON_USDC = this.reserveUSDC_GTON_USDC.mul(10**12).div(this.reserveGTON_GTON_USDC)
+             }
          },
          async estimate () {
+             // clear so that errors are evident
+             this.reserveGTON_GTON_USDC_new = BigNumber.from(0)
+             this.reserveUSDC_GTON_USDC_new = BigNumber.from(0)
+             this.priceGTON_USDC_new = BigNumber.from(0)
+             this.gtonbackGTON_USDC = BigNumber.from(0)
+             this.error = ""
              try {
-                 this.reserveGTON_GTON_USDC_new, this.reserveGTON_GTON_USDC_new, this.gtonbackGTON_USDC = await this.invoker.estimateNow(this.liquidityGTON_USDC, this.buybackGTON_USDC)
-                 this.priceGTON_USDC_new = this.reserveUSDC_GTON_USDC_new.div(this.reserveGTON_GTON_USDC_new)
-             } catch(e) { console.log(e) }
-         }
+                 let result = await this.invoker.estimateNow(this.liquidityGTON_USDC, this.buybackGTON_USDC)
+                 this.reserveGTON_GTON_USDC_new = result[0]
+                 this.reserveUSDC_GTON_USDC_new = result[1]
+                 this.gtonbackGTON_USDC = result[2]
+                 if (this.reserveGTON_GTON_USDC_new != 0) {
+                    this.priceGTON_USDC_new = this.reserveUSDC_GTON_USDC_new.mul(10**12).div(this.reserveGTON_GTON_USDC_new)
+                 }
+             } catch(e) {
+                 this.error = e;
+                 console.log(e)
+             }
+         },
+         formatUnits(amount: BigNumber, precision: number): string {
+             return ethers.utils.formatUnits(amount, precision);
+         },
      }
  })
 </script>

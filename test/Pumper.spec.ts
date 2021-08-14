@@ -103,6 +103,8 @@ describe("Pumper", () => {
         let result = await pumper.estimateNow(uniswapV2PairGTON_USDC.address, liquidity, buyback)
         let reserveGton = result[0]
         let reserveToken = result[1]
+        console.log(reserveGton.toString())
+        console.log(reserveToken.toString())
         expect(reserveToken.div(reserveGton)).to.be.eq("7")
     })
   })

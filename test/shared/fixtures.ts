@@ -163,7 +163,8 @@ export const pumperFixture: Fixture<PumperFixture> =
     )
     const pumper = (await pumperFactory.deploy(
       gton.address,
-      uniswapV2Router01.address
+      uniswapV2Router01.address,
+      "ffffffff"
     )) as Pumper
 
     return {
