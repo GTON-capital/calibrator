@@ -6,7 +6,7 @@ export interface Constants {
     quick_pool_GTON_USDC: string
     usdc: string,
     quick_pool_GTON_WMATIC: string
-    matic: string,
+    wmatic: string,
     quick_router: string
     quick_factory: string
     pumper: string
@@ -18,8 +18,8 @@ export const C: Constants = {
     quick_pool_GTON_USDC: '0xf01a0a0424bda0acdd044a61af88a34636e0001c',
     usdc: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
     quick_pool_GTON_WMATIC: '0x7d49d50c886882220c428afbe60408904c72e2df',
-    matic: '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
+    wmatic: '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
     quick_router: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff',
     quick_factory: '0x5757371414417b8c6caad45baef941abc7d3ab32',
-    pumper: '0xdC72a6D3F7dB1B12104Bb54895216274A381b307'
+    pumper: '0xFfB57187269aF94B660E3486b7519b81bE374cc8'
 }

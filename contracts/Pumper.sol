@@ -45,18 +45,18 @@ contract Pumper is IPumper {
         // transfer `liquidity` from msg.sender
         pool.transferFrom(msg.sender, address(this), liquidity);
         // remove `liquidity`
-        remove(pool);
+        IERC20 token = tokenFromPool(pool);
+        remove(pool, token);
         // buy gton for `amountBuyback`
-        buyback(pool, amountBuyback);
+        buyback(pool, token, amountBuyback);
         // add liquidity for all quote token and have some gton left
-        add(pool);
+        add(pool, token);
         // send gton and lp to `to`
         retrieve(pool, to);
     }
 
-    function remove(IUniswapV2Pair pool) internal {
+    function remove(IUniswapV2Pair pool, IERC20 token) internal {
         //log(pool, "=========== before remove ===========");
-        IERC20 token = tokenFromPool(pool);
         uint liquidity = pool.balanceOf(address(this));
         uint totalSupply = pool.totalSupply();
         uint amount0 = liquidity * gton.balanceOf(address(pool)) / totalSupply;
@@ -76,9 +76,8 @@ contract Pumper is IPumper {
         //log(pool, "===========  after remove ===========");
     }
 
-    function buyback(IUniswapV2Pair pool, uint256 amountBuyback) internal {
+    function buyback(IUniswapV2Pair pool, IERC20 token, uint256 amountBuyback) internal {
         //log(pool, "===========   before buy  ===========");
-        IERC20 token = tokenFromPool(pool);
         gton.approve(address(router), gton.balanceOf(address(this)));
         token.approve(address(router), token.balanceOf(address(this)));
         address[] memory pathToGton = new address[](2);
@@ -97,15 +96,14 @@ contract Pumper is IPumper {
         //log(pool, "===========   after buy   ===========");
     }
 
-    function add(IUniswapV2Pair pool) internal {
+    function add(IUniswapV2Pair pool, IERC20 token) internal {
         //log(pool, "===========   before add  ===========");
-        IERC20 token = tokenFromPool(pool);
         uint amountTokenAdd = token.balanceOf(address(this));
         address[] memory pathToGton = new address[](2);
         pathToGton[0] = address(token);
         pathToGton[1] = address(gton);
         uint deadline = block.timestamp+86400;
-        (uint reserveGton, uint reserveToken) = getReserves(router.factory(), address(gton), address(token));
+        (uint reserveGton, uint reserveToken) = getReserves(pool, address(gton), address(token));
         uint amountGtonAdd = quote(amountTokenAdd, reserveToken, reserveGton);
         //console.log("add liquidity", amountGtonAdd, amountTokenAdd);
         (uint amountA, uint amountB, uint liq) = router.addLiquidity(
@@ -139,7 +137,7 @@ contract Pumper is IPumper {
         IERC20 token = tokenFromPool(pool);
         (uint256 reserveGtonBefore,
          uint256 reserveTokenBefore) = getReserves(
-            router.factory(),
+            pool,
             address(gton),
             address(token)
         );
@@ -260,12 +258,12 @@ contract Pumper is IPumper {
     // fetches and sorts the reserves for a pair
     // uses getPair instead of pairFor because init code hashes can be different for amms
     function getReserves(
-        address factory,
+        IUniswapV2Pair pool,
         address tokenA,
         address tokenB
     ) public view returns (uint reserveA, uint reserveB) {
         (address token0,) = sortTokens(tokenA, tokenB);
-        (uint reserve0, uint reserve1,) = IUniswapV2Pair(IUniswapV2Factory(factory).getPair(tokenA, tokenB)).getReserves();
+        (uint reserve0, uint reserve1,) = pool.getReserves();
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 
@@ -285,18 +283,7 @@ contract Pumper is IPumper {
         amountIn = (numerator / denominator) + 1;
     }
 
-    // performs chained getAmountIn calculations on any number of pairs
-    function getAmountsIn(address factory, uint amountOut, address[] memory path) public view returns (uint[] memory amounts) {
-        require(path.length >= 2, 'UniswapV2Library: INVALID_PATH');
-        amounts = new uint[](path.length);
-        amounts[amounts.length - 1] = amountOut;
-        for (uint i = path.length - 1; i > 0; i--) {
-            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
-            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
-        }
-    }
-
-    function tokenFromPool(IUniswapV2Pair pool) internal view returns (IERC20 token) {
+    function tokenFromPool(IUniswapV2Pair pool) public view returns (IERC20 token) {
         address token0 = pool.token0();
         address token1 = pool.token1();
         token = token0 == address(gton) ? IERC20(token1) : IERC20(token0);

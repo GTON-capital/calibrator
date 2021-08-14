@@ -36,23 +36,45 @@ export default class Invoker {
         return balance
     }
 
-    async estimateNow(liquidity: string, buyback: string): Promise<BigNumber[]> {
-        const contract = new ethers.Contract(C.pumper, PumperABI, this.provider) as Pumper
-        let result = await contract.estimateNow(C.quick_pool_GTON_USDC, liquidity, buyback)
-        let reserveGTON = result[0]
-        let reserveToken = result[1]
-        let gtonback = result[2]
-        return [reserveGTON, reserveToken, gtonback]
+    async estimateRemove(pair: string, token: string, liquidity: string): Promise<BigNumber[]> {
+        const pool = new ethers.Contract(pair, UniswapV2PairABI, this.provider) as UniswapV2Pair
+        const totalSupply = await pool.totalSupply()
+        const pumper = new ethers.Contract(C.pumper, PumperABI, this.provider) as Pumper
+        let reserves = await pumper.getReserves(pair, C.gton, token)
+        let reserveGton = reserves[0]
+        let reserveToken = reserves[1]
+        let remove = await pumper.estimateRemove(reserveGton, reserveToken, totalSupply, liquidity)
+        let reserveGtonAfterRemove = remove[0]
+        let reserveTokenAfterRemove = remove[1]
+        let removedGton = remove[2]
+        let removedToken = remove[3]
+        return [reserveGtonAfterRemove, reserveTokenAfterRemove, removedGton, removedToken]
+    }
+
+    async estimateBuyback(reserveGton: BigNumber, reserveToken: BigNumber, amountBuyback: string): Promise<BigNumber[]> {
+        const pumper = new ethers.Contract(C.pumper, PumperABI, this.provider) as Pumper
+        let buyback = await pumper.estimateBuyback(reserveGton, reserveToken, amountBuyback)
+        let reserveGtonAfterBuyback = buyback[0]
+        let reserveTokenAfterBuyback = buyback[1]
+        let amountToken = buyback[2]
+        return [reserveGtonAfterBuyback, reserveTokenAfterBuyback, amountToken]
+    }
+
+    async estimateAdd(reserveGton: BigNumber, reserveToken: BigNumber, amountToken: BigNumber): Promise<BigNumber[]> {
+        const pumper = new ethers.Contract(C.pumper, PumperABI, this.provider) as Pumper
+        let add = await pumper.estimateAdd(reserveGton, reserveToken, amountToken)
+        let reserveGtonAfterAdd = add[0]
+        let reserveTokenAfterAdd = add[1]
+        let amountGton = add[2]
+        return [reserveGtonAfterAdd, reserveTokenAfterAdd, amountGton]
+    }
+
+    async estimateNow(pool: string, liquidity: string, buyback: string): Promise<BigNumber[]> {
+        const pumper = new ethers.Contract(C.pumper, PumperABI, this.provider) as Pumper
+        let estimateNow = await pumper.estimateNow(pool, liquidity, buyback)
+        let reserveGton = estimateNow[0]
+        let reserveToken = estimateNow[1]
+        let gtonback = estimateNow[2]
+        return [reserveGton, reserveToken, gtonback]
     }
 }
-
-// export function formatETHBalance(amount: string): string {
-//   return ethers.utils.formatUnits(amount, "ether");
-// }
-// export function formatAmountToPrecision(
-//   value: string,
-//   precision: number
-// ): string {
-//   let dotAt = value.indexOf(".");
-//   return dotAt !== -1 ? value.slice(0, ++dotAt + precision) : value;
-// }
