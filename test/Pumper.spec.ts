@@ -46,62 +46,66 @@ describe("Pumper", () => {
     startingBalance = await wallet.provider.getBalance(wallet.address)
   })
 
-  it("constructor initializes variables", async () => {
-      // lp balance of gton_weth
-      // lp balance of gton_usdc
-      // price on gton-usdc
-      let amountsIn = BigNumber.from("1000")
+  async function getPrice(): Promise<BigNumber> {
+      let amountsIn = BigNumber.from("10000")
       let [amountGTON, amountUSDC] = await uniswapV2Router01.getAmountsOut(
           amountsIn,
           [gton.address, usdc.address]
       )
-      let price = amountUSDC.div(amountGTON)
-      expect(price).to.eq(5)
+      return amountUSDC.div(amountGTON)
+  }
+
+  it("constructor initializes variables", async () => {
+      // lp balance of gton_weth
+      // lp balance of gton_usdc
+      expect(await uniswapV2PairGTON_USDC.balanceOf(wallet.address))
+        .to.eq("22360679774997895964")
+      // price on gton-usdc
+      expect(await getPrice()).to.be.eq("4")
       // price on gton-weth
   })
 
   describe("#pump", async () => {
     it("fails if lp is not approved", async () => {
-        let amountLP = expandTo18Decimals(1)
-        let gtonBuyback = expandTo18Decimals(10)
-        await expect(pumper.pump(amountLP, gtonBuyback, wallet.address)).to.be.revertedWith("P1")
+        let liquidity = expandTo18Decimals(1)
+        let buyback = expandTo18Decimals(10)
+        await expect(pumper.pump(liquidity, buyback, wallet.address))
+          .to.be.revertedWith("ds-math-sub-underflow")
     })
 
     it("transfers lp and gton to account after pump", async () => {
-        let amountLP = expandTo18Decimals(1)
-        let gtonBuyback = expandTo18Decimals(10)
-        await pumper.pump(amountLP, gtonBuyback, other.address)
+        let startingGton = await gton.balanceOf(other.address)
+        let liquidity = expandTo18Decimals(10)
+        let buyback = expandTo18Decimals(1)
+        await uniswapV2PairGTON_USDC.approve(pumper.address, liquidity)
+        await pumper.pump(liquidity, buyback, other.address)
+        let gtonGained = (await gton.balanceOf(other.address)).sub(startingGton)
+        expect(gtonGained).to.be.eq("3294429837562624227")
         expect(await uniswapV2PairGTON_USDC.balanceOf(other.address))
             .to.be.gt(0)
         expect(await uniswapV2PairGTON_USDC.balanceOf(other.address))
-            .to.be.lt(expandTo18Decimals(1))
-        expect(await gton.balanceOf(other.address))
-            .to.be.eq(expandTo18Decimals(10))
+            .to.be.eq("5944950575849206235")
     })
 
-    it("changes pool price by 10% after pump", async () => {
-        let amountLP = expandTo18Decimals(1)
-        let gtonBuyback = expandTo18Decimals(10)
-        await pumper.pump(amountLP, gtonBuyback, other.address)
-        let amountsIn = BigNumber.from("1000")
-        let [amountGTON, amountUSDC] = await uniswapV2Router01.getAmountsOut(
-            amountsIn,
-            [gton.address, usdc.address]
-        )
-        let price = amountUSDC.div(amountGTON)
-        console.log("price", price)
-        expect(price).to.be.gt(5)
+    it("sets price from 4 to 7", async () => {
+        let liquidity = expandTo18Decimals(10)
+        let buyback = expandTo18Decimals(1)
+        await uniswapV2PairGTON_USDC.approve(pumper.address, liquidity)
+        await pumper.pump(liquidity, buyback, other.address)
+        expect(await getPrice()).to.be.eq(7)
     })
+  })
 
-    it("spends less than x to pump", async () => {
-        let amountLP = expandTo18Decimals(1)
-        let gtonBuyback = expandTo18Decimals(10)
-        await pumper.pump(amountLP, gtonBuyback, other.address)
-        let currentBalance = await wallet.provider.getBalance(wallet.address)
-        let balanceUsed = startingBalance.sub(currentBalance)
-        console.log("balance used:", balanceUsed)
-        // TODO: calculate proper resulting number
-        expect(balanceUsed).to.be.lt(10000000000)
+  describe("#estimate", async () => {
+    it("estimates price change from 4 to 7", async () => {
+        let liquidity = expandTo18Decimals(10)
+        let buyback = expandTo18Decimals(1)
+        let result = await pumper.estimateNow(liquidity, buyback)
+        let reserveGton = result[0]
+        let reserveToken = result[1]
+        await uniswapV2PairGTON_USDC.approve(pumper.address, liquidity)
+        await pumper.pump(liquidity, buyback, other.address)
+        expect(reserveToken.div(reserveGton)).to.be.eq("7")
     })
   })
 

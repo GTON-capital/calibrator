@@ -24,5 +24,8 @@ export default {
         version: "0.5.16"
       }
     ]
+  },
+  mocha: {
+    timeout: '10000000000'
   }
 };

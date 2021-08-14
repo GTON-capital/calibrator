@@ -148,9 +148,9 @@ interface PumperFixture extends UniswapFixture {
 export const pumperFixture: Fixture<PumperFixture> =
   async function ([wallet, other, nebula], provider): Promise<PumperFixture> {
     const {
-      token0,
-      token1,
-      token2,
+      token0: gton,
+      token1: usdt,
+      token2: usdc,
       weth,
       uniswapV2Factory,
       uniswapV2Router01,
@@ -162,12 +162,16 @@ export const pumperFixture: Fixture<PumperFixture> =
       "Pumper"
     )
     const pumper = (await pumperFactory.deploy(
+      gton.address,
+      usdc.address,
+      uniswapV2PairGTON_USDC.address,
+      uniswapV2Router01.address
     )) as Pumper
 
     return {
-      token0,
-      token1,
-      token2,
+      token0: gton,
+      token1: usdt,
+      token2: usdc,
       weth,
       uniswapV2Factory,
       uniswapV2Router01,
