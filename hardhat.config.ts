@@ -1,6 +1,7 @@
 import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
+import "hardhat-abi-exporter";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -24,6 +25,11 @@ export default {
         version: "0.5.16"
       }
     ]
+  },
+  abiExporter: {
+    clear: true,
+    flat: true,
+    spacing: 2
   },
   mocha: {
     timeout: '10000000000'

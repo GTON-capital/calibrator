@@ -15,6 +15,6 @@
       ]
     }
   },
-  "include": ["./test"],
+  "include": ["./test", "./client/services"],
   "files": ["./hardhat.config.ts"]
 }

@@ -69,7 +69,7 @@ describe("Pumper", () => {
     it("fails if lp is not approved", async () => {
         let liquidity = expandTo18Decimals(1)
         let buyback = expandTo18Decimals(10)
-        await expect(pumper.pump(liquidity, buyback, wallet.address))
+        await expect(pumper.pump(uniswapV2PairGTON_USDC.address, liquidity, buyback, wallet.address))
           .to.be.revertedWith("ds-math-sub-underflow")
     })
 
@@ -78,7 +78,7 @@ describe("Pumper", () => {
         let liquidity = expandTo18Decimals(10)
         let buyback = expandTo18Decimals(1)
         await uniswapV2PairGTON_USDC.approve(pumper.address, liquidity)
-        await pumper.pump(liquidity, buyback, other.address)
+        await pumper.pump(uniswapV2PairGTON_USDC.address, liquidity, buyback, other.address)
         let gtonGained = (await gton.balanceOf(other.address)).sub(startingGton)
         expect(gtonGained).to.be.eq("3294429837562624227")
         expect(await uniswapV2PairGTON_USDC.balanceOf(other.address))
@@ -91,7 +91,7 @@ describe("Pumper", () => {
         let liquidity = expandTo18Decimals(10)
         let buyback = expandTo18Decimals(1)
         await uniswapV2PairGTON_USDC.approve(pumper.address, liquidity)
-        await pumper.pump(liquidity, buyback, other.address)
+        await pumper.pump(uniswapV2PairGTON_USDC.address, liquidity, buyback, other.address)
         expect(await getPrice()).to.be.eq(7)
     })
   })
@@ -100,11 +100,9 @@ describe("Pumper", () => {
     it("estimates price change from 4 to 7", async () => {
         let liquidity = expandTo18Decimals(10)
         let buyback = expandTo18Decimals(1)
-        let result = await pumper.estimateNow(liquidity, buyback)
+        let result = await pumper.estimateNow(uniswapV2PairGTON_USDC.address, liquidity, buyback)
         let reserveGton = result[0]
         let reserveToken = result[1]
-        await uniswapV2PairGTON_USDC.approve(pumper.address, liquidity)
-        await pumper.pump(liquidity, buyback, other.address)
         expect(reserveToken.div(reserveGton)).to.be.eq("7")
     })
   })

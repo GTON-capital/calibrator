@@ -2,49 +2,67 @@
 pragma solidity >=0.8.0;
 
 import "./interfaces/IPumper.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 /// @title Pumper
 contract Pumper is IPumper {
 
+    address owner;
     IERC20 gton;
-    IERC20 token;
-    IUniswapV2Pair pool;
     IUniswapV2Router01 router;
+    string memory VERSION;
 
     constructor(
         IERC20 _gton,
-        IERC20 _token,
-        IUniswapV2Pair _pool,
-        IUniswapV2Router01 _router
+        IUniswapV2Router01 _router,
+        string memory _VERSION
     ) {
+        owner = msg.sender;
+        VERSTION = _VERSION;
         gton = _gton;
-        token = _token;
-        pool = _pool;
         router = _router;
     }
 
-    function pump(uint256 liquidity, uint256 amountBuyback, address to) external {
+    function setOwner(address _owner) external {
+        require(msg.sender == owner, "ACW");
+        owner = _owner;
+    }
+
+    function pump2(
+        IUniswapV2Pair pool1,
+        uint256 liquidity1,
+        uint256 amountBuyback1,
+        IUniswapV2Pair pool2,
+        uint256 liquidity2,
+        uint256 amountBuyback2,
+        address to
+    ) external {
+        pump(pool1, liquidity1, amountBuyback1, to);
+        pump(pool2, liquidity2, amountBuyback2, to);
+    }
+
+    function pump(IUniswapV2Pair pool, uint256 liquidity, uint256 amountBuyback, address to) public {
         // transfer `liquidity` from msg.sender
         pool.transferFrom(msg.sender, address(this), liquidity);
         // remove `liquidity`
-        remove();
+        remove(pool);
         // buy gton for `amountBuyback`
-        buyback(amountBuyback);
+        buyback(pool, amountBuyback);
         // add liquidity for all quote token and have some gton left
-        add();
+        add(pool);
         // send gton and lp to `to`
-        retrieve(to);
+        retrieve(pool, to);
     }
 
-    function remove() internal {
-        log("=========== before remove ===========");
+    function remove(IUniswapV2Pair pool) internal {
+        //log(pool, "=========== before remove ===========");
+        IERC20 token = tokenFromPool(pool);
         uint liquidity = pool.balanceOf(address(this));
         uint totalSupply = pool.totalSupply();
         uint amount0 = liquidity * gton.balanceOf(address(pool)) / totalSupply;
         uint amount1 = liquidity * token.balanceOf(address(pool)) / totalSupply;
         uint deadline = block.timestamp+86400;
-        console.log("remove liquidity", amount0, amount1, liquidity);
+        //console.log("remove liquidity", amount0, amount1, liquidity);
         pool.approve(address(router), liquidity);
         router.removeLiquidity(
             address(gton),
@@ -55,11 +73,12 @@ contract Pumper is IPumper {
             address(this),
             deadline
         );
-        log("===========  after remove ===========");
+        //log(pool, "===========  after remove ===========");
     }
 
-    function buyback(uint256 amountBuyback) internal {
-        log("===========   before buy  ===========");
+    function buyback(IUniswapV2Pair pool, uint256 amountBuyback) internal {
+        //log(pool, "===========   before buy  ===========");
+        IERC20 token = tokenFromPool(pool);
         gton.approve(address(router), gton.balanceOf(address(this)));
         token.approve(address(router), token.balanceOf(address(this)));
         address[] memory pathToGton = new address[](2);
@@ -67,7 +86,7 @@ contract Pumper is IPumper {
         pathToGton[1] = address(gton);
         uint deadline = block.timestamp+86400;
         uint[] memory amounts = router.getAmountsIn(amountBuyback, pathToGton);
-        console.log("swap gton for token", amountBuyback, amounts[0]);
+        //console.log("swap gton for token", amountBuyback, amounts[0]);
         router.swapTokensForExactTokens(
             amountBuyback,
             amounts[0],
@@ -75,11 +94,12 @@ contract Pumper is IPumper {
             address(this),
             deadline
         );
-        log("===========   after buy   ===========");
+        //log(pool, "===========   after buy   ===========");
     }
 
-    function add() internal {
-        log("===========   before add  ===========");
+    function add(IUniswapV2Pair pool) internal {
+        //log(pool, "===========   before add  ===========");
+        IERC20 token = tokenFromPool(pool);
         uint amountTokenAdd = token.balanceOf(address(this));
         address[] memory pathToGton = new address[](2);
         pathToGton[0] = address(token);
@@ -87,7 +107,7 @@ contract Pumper is IPumper {
         uint deadline = block.timestamp+86400;
         (uint reserveGton, uint reserveToken) = getReserves(router.factory(), address(gton), address(token));
         uint amountGtonAdd = quote(amountTokenAdd, reserveToken, reserveGton);
-        console.log("add liquidity", amountGtonAdd, amountTokenAdd);
+        //console.log("add liquidity", amountGtonAdd, amountTokenAdd);
         (uint amountA, uint amountB, uint liq) = router.addLiquidity(
             address(token),
             address(gton),
@@ -98,35 +118,38 @@ contract Pumper is IPumper {
             address(this),
             deadline
         );
-        console.log("add liquidity", amountA, amountB, liq);
-        log("===========   after add   ===========");
+        //console.log("add liquidity", amountA, amountB, liq);
+        //log(pool, "===========   after add   ===========");
     }
 
-    function retrieve(address to) internal {
-        log("========== before retrieve ==========");
+    function retrieve(IUniswapV2Pair pool, address to) internal {
+        //log(pool, "========== before retrieve ==========");
         pool.transfer(to, pool.balanceOf(address(this)));
         gton.transfer(to, gton.balanceOf(address(this)));
-        log("==========  after retrieve ==========");
+        //log(pool, "==========  after retrieve ==========");
     }
 
     // **** ESTIMATE FUNCTIONS ****
-    function estimateNow(uint256 liquidity, uint256 amountBuyback)
+    function estimateNow(IUniswapV2Pair pool, uint256 liquidity, uint256 amountBuyback)
         external view returns (
         uint256 reserveGton,
         uint256 reserveToken,
         uint256 amountGton
     ) {
+        IERC20 token = tokenFromPool(pool);
         (uint256 reserveGtonBefore,
          uint256 reserveTokenBefore) = getReserves(
             router.factory(),
             address(gton),
             address(token)
         );
+        uint256 totalSupplyBefore = pool.totalSupply();
         (reserveGton,
          reserveToken,
          amountGton) = estimate(
             reserveGtonBefore,
             reserveTokenBefore,
+            totalSupplyBefore,
             liquidity,
             amountBuyback
         );
@@ -135,10 +158,11 @@ contract Pumper is IPumper {
     function estimate(
         uint256 reserveGtonBefore,
         uint256 reserveTokenBefore,
+        uint256 totalSupplyBefore,
         uint256 liquidity,
         uint256 amountBuyback
     )
-        public view returns (
+        public pure returns (
         uint256 reserveGton,
         uint256 reserveToken,
         uint256 amountGton
@@ -149,6 +173,7 @@ contract Pumper is IPumper {
          uint256 amountTokenAfterRemove) = estimateRemove(
             reserveGtonBefore,
             reserveTokenBefore,
+            totalSupplyBefore,
             liquidity
         );
         (uint256 reserveGtonAfterBuyback,
@@ -172,20 +197,20 @@ contract Pumper is IPumper {
     function estimateRemove(
         uint256 reserveGton,
         uint256 reserveToken,
+        uint256 totalSupply,
         uint256 liquidity
     )
-        public view returns (
+        public pure returns (
         uint256 reserveGtonAfterRemove,
         uint256 reserveTokenAfterRemove,
         uint256 amountGtonAfterRemove,
         uint256 amountTokenAfterRemove
     ) {
-        uint totalSupply = pool.totalSupply();
-        amountGtonAfterRemove = liquidity * gton.balanceOf(address(pool)) / totalSupply;
-        amountTokenAfterRemove = liquidity * token.balanceOf(address(pool)) / totalSupply;
+        amountGtonAfterRemove = liquidity * reserveGton / totalSupply;
+        amountTokenAfterRemove = liquidity * reserveToken / totalSupply;
         reserveGtonAfterRemove = reserveGton - amountGtonAfterRemove;
         reserveTokenAfterRemove = reserveToken - amountTokenAfterRemove;
-        console.log("after remove", reserveGtonAfterRemove, reserveTokenAfterRemove);
+        //console.log("after remove", reserveGtonAfterRemove, reserveTokenAfterRemove);
     }
 
     function estimateBuyback(
@@ -193,7 +218,7 @@ contract Pumper is IPumper {
         uint256 reserveToken,
         uint256 amountBuyback
     )
-        public view returns (
+        public pure returns (
         uint256 reserveGtonAfterBuyback,
         uint256 reserveTokenAfterBuyback,
         uint256 amountToken
@@ -203,17 +228,17 @@ contract Pumper is IPumper {
             reserveToken,
             reserveGton
         );
-        console.log("swap gton for token", amountBuyback, amountToken);
+        //console.log("swap gton for token", amountBuyback, amountToken);
         reserveGtonAfterBuyback = reserveGton - amountBuyback;
         reserveTokenAfterBuyback = reserveToken + amountToken;
-        console.log("after buyback", reserveGtonAfterBuyback, reserveTokenAfterBuyback);
+        //console.log("after buyback", reserveGtonAfterBuyback, reserveTokenAfterBuyback);
     }
 
     function estimateAdd(
         uint256 reserveGton,
         uint256 reserveToken,
         uint256 amountTokenAdd
-    ) public view returns (
+    ) public pure returns (
         uint256 reserveGtonAfterAdd,
         uint256 reserveTokenAfterAdd,
         uint256 amountGtonAdd
@@ -221,7 +246,7 @@ contract Pumper is IPumper {
         amountGtonAdd = quote(amountTokenAdd, reserveToken, reserveGton);
         reserveGtonAfterAdd = reserveGton + amountGtonAdd;
         reserveTokenAfterAdd = reserveToken + amountTokenAdd;
-        console.log("after add", reserveGtonAfterAdd, reserveTokenAfterAdd);
+        //console.log("after add", reserveGtonAfterAdd, reserveTokenAfterAdd);
     }
 
     // **** LIBRARY FUNCTIONS ****
@@ -271,26 +296,43 @@ contract Pumper is IPumper {
         }
     }
 
-    // **** LOG FUNCTION ****
-    function log(string memory s) internal {
-        console.log(s);
-        console.log(
-            "balances",
-            gton.balanceOf(address(this)),
-            token.balanceOf(address(this))
-        );
-        console.log(
-            "reserves",
-            gton.balanceOf(address(pool)),
-            token.balanceOf(address(pool))
-        );
-        address[] memory pathToToken = new address[](2);
-        pathToToken[0] = address(gton);
-        pathToToken[1] = address(token);
-        uint[] memory quotes = router.getAmountsOut(1e10, pathToToken);
-        console.log("price");
-        console.log(quotes[1], "/", quotes[0], quotes[1]/quotes[0]);
-        console.log("=====================================");
+    function tokenFromPool(IUniswapV2Pair pool) internal view returns (IERC20 token) {
+        address token0 = pool.token0();
+        address token1 = pool.token1();
+        token = token0 == address(gton) ? IERC20(token1) : IERC20(token0);
     }
 
+    // **** RECLAIM FUNCTION ****
+    function reclaimERC20(IERC20 token, uint256 amount) external {
+        require(msg.sender == owner, "ACW");
+        token.transfer(msg.sender, amount);
+    }
+
+    function reclaimNative(uint256 amount) external {
+        require(msg.sender == owner, "ACW");
+        payable(msg.sender).transfer(amount);
+    }
+
+    // **** LOG FUNCTION ****
+    // function log(IUniswapV2Pair pool, string memory s) internal {
+        // IERC20 token = tokenFromPool(pool);
+        //console.log(s);
+        //console.log(
+        //     "balances",
+        //     gton.balanceOf(address(this)),
+        //     token.balanceOf(address(this))
+        // );
+        //console.log(
+        //     "reserves",
+        //     gton.balanceOf(address(pool)),
+        //     token.balanceOf(address(pool))
+        // );
+        // address[] memory pathToToken = new address[](2);
+        // pathToToken[0] = address(gton);
+        // pathToToken[1] = address(token);
+        // uint[] memory quotes = router.getAmountsOut(1e10, pathToToken);
+        //console.log("price");
+        //console.log(quotes[1], "/", quotes[0], quotes[1]/quotes[0]);
+        //console.log("=====================================");
+    // }
 }
