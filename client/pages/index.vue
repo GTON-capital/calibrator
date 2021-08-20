@@ -78,22 +78,22 @@
              totalSupply: BigNumber.from(0),
              reserveGTON: BigNumber.from(0),
              reserveUSDC: BigNumber.from(0),
-             price: BigNumber.from(0),
+             price: 0,
              amountGTON_afterRemove: BigNumber.from(0),
              amountUSDC_afterRemove: BigNumber.from(0),
              reserveGTON_afterRemove: BigNumber.from(0),
              reserveUSDC_afterRemove: BigNumber.from(0),
-             price_afterRemove: BigNumber.from(0),
+             price_afterRemove: 0,
              amountGTON_afterBuyback: BigNumber.from(0),
              amountUSDC_afterBuyback: BigNumber.from(0),
              reserveGTON_afterBuyback: BigNumber.from(0),
              reserveUSDC_afterBuyback: BigNumber.from(0),
-             price_afterBuyback: BigNumber.from(0),
+             price_afterBuyback: 0,
              amountGTON_afterAdd: BigNumber.from(0),
              amountUSDC_afterAdd: BigNumber.from(0),
              reserveGTON_afterAdd: BigNumber.from(0),
              reserveUSDC_afterAdd: BigNumber.from(0),
-             price_afterAdd: BigNumber.from(0),
+             price_afterAdd: 0,
              liquidity: "10000000000000000",
              buyback: "300000000000000000000",
              error: ""
@@ -113,14 +113,14 @@
              this.safeLiquidity = BigNumber.from(0)
              this.reserveGTON = BigNumber.from(0)
              this.reserveUSDC = BigNumber.from(0)
-             this.price = BigNumber.from(0)
+             this.price = 0
 
              this.safeLiquidity = await this.invoker.safeLiquidity(C.quick_pool_GTON_USDC)
              this.totalSupply = await this.invoker.totalSupply(C.quick_pool_GTON_USDC)
              this.reserveGTON = await this.invoker.reserve(C.quick_pool_GTON_USDC, C.gton)
              this.reserveUSDC = await this.invoker.reserve(C.quick_pool_GTON_USDC, C.usdc)
              if (this.reserveGTON != 0) {
-                 this.price = this.reserveUSDC.mul(10**12).div(this.reserveGTON)
+                 this.price = this.reserveUSDC.mul(10**12).mul(10**2).div(this.reserveGTON).toNumber() / (10**2)
              }
          },
          async estimate () {
@@ -129,17 +129,17 @@
              this.amountUSDC_afterRemove = BigNumber.from(0)
              this.reserveGTON_afterRemove = BigNumber.from(0)
              this.reserveUSDC_afterRemove = BigNumber.from(0)
-             this.price_afterRemove = BigNumber.from(0)
+             this.price_afterRemove = 0
              this.amountGTON_afterBuyback = BigNumber.from(0)
              this.amountUSDC_afterBuyback = BigNumber.from(0)
              this.reserveGTON_afterBuyback = BigNumber.from(0)
              this.reserveUSDC_afterBuyback = BigNumber.from(0)
-             this.price_afterBuyback = BigNumber.from(0)
+             this.price_afterBuyback = 0
              this.amountGTON_afterAdd = BigNumber.from(0)
              this.amountUSDC_afterAdd = BigNumber.from(0)
              this.reserveGTON_afterAdd = BigNumber.from(0)
              this.reserveUSDC_afterAdd = BigNumber.from(0)
-             this.price_afterAdd = BigNumber.from(0)
+             this.price_afterAdd = 0
              this.error = ""
              try {
                  let result = await this.invoker.estimateRemove(
@@ -149,7 +149,7 @@
                  this.amountGTON_afterRemove = result[2]
                  this.amountUSDC_afterRemove = result[3]
                  if (this.reserveGTON_afterRemove != 0) {
-                     this.price_afterRemove = this.reserveUSDC_afterRemove.mul(10**12).div(this.reserveGTON_afterRemove)
+                     this.price_afterRemove = this.reserveUSDC_afterRemove.mul(10**12).mul(10**2).div(this.reserveGTON_afterRemove) / (10**2)
                  }
              } catch(e) {
                  this.error = "remove: " + e
@@ -169,7 +169,7 @@
                  if (this.amountUSDC_afterRemove.lt(amountToken)) { throw "not enough token" }
                  this.amountUSDC_afterBuyback = this.amountUSDC_afterRemove.sub(amountToken)
                  if (this.reserveGTON_afterBuyback != 0) {
-                     this.price_afterBuyback = this.reserveUSDC_afterBuyback.mul(10**12).div(this.reserveGTON_afterBuyback)
+                     this.price_afterBuyback = this.reserveUSDC_afterBuyback.mul(10**12).mul(10**2).div(this.reserveGTON_afterBuyback) / (10**2)
                  }
              } catch(e) {
                  this.error = "buyback: " + e
@@ -187,7 +187,7 @@
                  this.amountGTON_afterAdd = this.amountGTON_afterBuyback.sub(amountGTON)
                  this.amountUSDC_afterAdd = BigNumber.from(0)
                  if (this.reserveGTON_afterAdd != 0) {
-                     this.price_afterAdd = this.reserveUSDC_afterAdd.mul(10**12).div(this.reserveGTON_afterAdd)
+                     this.price_afterAdd = this.reserveUSDC_afterAdd.mul(10**12).mul(10**2).div(this.reserveGTON_afterAdd) / (10**2)
                  }
              } catch(e) {
                  this.error = "add: " + e
