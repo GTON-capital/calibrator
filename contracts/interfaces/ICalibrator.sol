@@ -7,5 +7,5 @@ import "./IUniswapV2Router01.sol";
 import "./IUniswapV2Factory.sol";
 import "./IUniswapV2Pair.sol";
 
-interface IPumper {
+interface ICalibrator {
 }
