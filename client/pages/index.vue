@@ -38,7 +38,7 @@
                     <option v-for="pu in calibrators" v-bind:value="pu.value">{{pu.name}}</option>
                 </datalist>
                 <Button class='button--green' size="large" ghost @click="update">Update</Button>
-                <div> Pool Base-USDC</div>
+                <div> Pool {{ template.name }}</div>
                 <div> Total supply: {{ totalSupply }},
                     LP on safe: {{ safeLiquidity }}</div>
                 <br>
@@ -48,9 +48,9 @@
                         <tr>
                             <td></td>
                             <td>Base</td>
-                            <td>USDC</td>
+                            <td>Quote</td>
                             <td>reserve Base</td>
-                            <td>reserve USDC</td>
+                            <td>reserve Quote</td>
                             <td>price</td>
                         </tr>
                     </thead>
@@ -61,7 +61,7 @@
                             <td>0</td>
                             <td>{{ formatUnits(reserveBase, 18) }}</td>
                             <td>{{ formatUnits(reserveToken, decimals) }}</td>
-                            <td>1 Base = {{ price }} USDC</td>
+                            <td>1 Base = {{ price }} Quote</td>
                         </tr>
                         <tr>
                             <td>After remove</td>
@@ -69,7 +69,7 @@
                             <td>{{ formatUnits(amountToken_afterRemove, decimals) }}</td>
                             <td>{{ formatUnits(reserveBase_afterRemove, 18) }}</td>
                             <td>{{ formatUnits(reserveToken_afterRemove, decimals) }}</td>
-                            <td>1 Base = {{ price_afterRemove }} USDC</td>
+                            <td>1 Base = {{ price_afterRemove }} Quote</td>
                         </tr>
                         <tr>
                             <td>After amount</td>
@@ -77,7 +77,7 @@
                             <td>{{ formatUnits(amountToken_afterBuy, decimals) }}</td>
                             <td>{{ formatUnits(reserveBase_afterBuy, 18) }}</td>
                             <td>{{ formatUnits(reserveToken_afterBuy, decimals) }}</td>
-                            <td>1 Base = {{ price_afterBuy }} USDC</td>
+                            <td>1 Base = {{ price_afterBuy }} Quote</td>
                         </tr>
                         <tr>
                             <td>After add</td>
@@ -85,7 +85,7 @@
                             <td>{{ formatUnits(amountToken_afterAdd, decimals) }}</td>
                             <td>{{ formatUnits(reserveBase_afterAdd, 18) }}</td>
                             <td>{{ formatUnits(reserveToken_afterAdd, decimals) }}</td>
-                            <td>1 Base = {{ price_afterAdd }} USDC</td>
+                            <td>1 Base = {{ price_afterAdd }} Quote</td>
                         </tr>
                     </tbody>
                 </table>

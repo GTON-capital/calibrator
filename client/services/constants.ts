@@ -41,7 +41,7 @@ export const C: Constants = {
     wmatic: '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
     quick_router: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff',
     quick_factory: '0x5757371414417b8c6caad45baef941abc7d3ab32',
-    calibrator_plg: '0xFfB57187269aF94B660E3486b7519b81bE374cc8',
+    calibrator_plg: '0x85A6536853B47997b430344DbD1e76C3aCbA2817',
     rpc_ftm: 'https://rpc.ftm.tools',
     rpc_bsc: 'https://bsc-dataseed1.binance.org',
     rpc_plg: 'https://rpc-mainnet.maticvigil.com',
@@ -105,6 +105,18 @@ export const rpcs = [
      pool: C.quick_pool_GTON_USDC,
      rpc: C.rpc_plg
  }
+ const template_plg_wmatic = {
+     name: "PLG GTON-WMATIC",
+     gton: C.gton_plg,
+     safe: C.safe_plg,
+     calibrator: C.calibrator_plg,
+     token: C.wmatic,
+     decimals: 18,
+     router: C.quick_router,
+     factory: C.quick_factory,
+     pool: C.quick_pool_GTON_WMATIC,
+     rpc: C.rpc_plg
+ }
  const template_hec_ht = {
      name: "HEC GTON-HT",
      gton: C.gton_hec,
@@ -132,6 +144,7 @@ export const rpcs = [
 
 export const templates = [
     template_plg_usdc,
+    template_plg_wmatic,
     template_hec_ht,
     template_bsc_bnb
 ]
