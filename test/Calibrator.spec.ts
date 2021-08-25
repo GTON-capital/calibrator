@@ -38,6 +38,7 @@ describe("Calibrator", () => {
   let calibrator: Calibrator
   let calibratorMdex: Calibrator
   let startingBalance: BigNumber
+
   beforeEach("deploy test contracts", async () => {
     ;({ token0: gton,
         token1: usdt,
@@ -177,8 +178,8 @@ describe("Calibrator", () => {
         await uniswapV2PairGTON_USDC.approve(calibrator.address, liquidity)
         await calibrator.calibrate(uniswapV2PairGTON_USDC.address, liquidity, buyback, other.address)
         let k = await uniswapV2PairGTON_USDC.kLast()
-        console.log(k.toString())
-        console.log((await uniswapV2PairGTON_USDC.balanceOf(other.address)).toString())
+        // console.log(k.toString())
+        // console.log((await uniswapV2PairGTON_USDC.balanceOf(other.address)).toString())
         let reserves = await uniswapV2PairGTON_USDC.getReserves()
         let reserveGton2 = reserves[0]
         let reserveToken2 = reserves[1]
@@ -194,8 +195,8 @@ describe("Calibrator", () => {
         await uniswapV2PairGTON_USDC.approve(calibrator.address, liquidity)
         await calibrator.calibrate(uniswapV2PairGTON_USDC.address, liquidity, buyback, other.address)
         k = await uniswapV2PairGTON_USDC.kLast()
-        console.log(k.toString())
-        console.log((await uniswapV2PairGTON_USDC.balanceOf(other.address)).toString())
+        // console.log(k.toString())
+        // console.log((await uniswapV2PairGTON_USDC.balanceOf(other.address)).toString())
         reserves = await uniswapV2PairGTON_USDC.getReserves()
         reserveGton2 = reserves[0]
         reserveToken2 = reserves[1]

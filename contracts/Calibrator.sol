@@ -8,19 +8,33 @@ import "./interfaces/ICalibrator.sol";
 contract Calibrator is ICalibrator {
 
     address public owner;
-    IERC20 public gton;
+    IERC20 public base;
     IUniswapV2Router01 public router;
-    string public VERSION;
+    string dex;
+
+    struct Pool {
+        uint256 reserveBase;
+        uint256 reserveQuote;
+        uint256 totalSupply;
+        uint256 kLast;
+    }
+
+    struct Wallet {
+        uint256 amountBase;
+        uint256 amountQuote;
+        uint256 liquidity;
+    }
 
     constructor(
-        IERC20 _gton,
+        IERC20 _base,
         IUniswapV2Router01 _router,
-        string memory _VERSION
+        string memory _dex
     ) {
         owner = msg.sender;
-        gton = _gton;
+        base = _base;
         router = _router;
-        VERSION = _VERSION;
+        require((equal(_dex,"MDEX")) || (equal(_dex,"QUICK")), "dex unknown");
+        dex = _dex;
     }
 
     function setOwner(address _owner) external {
@@ -28,78 +42,114 @@ contract Calibrator is ICalibrator {
         owner = _owner;
     }
 
+    // **** CALIBRATE FUNCTIONS ****
+
+    function calibrate3(
+        IUniswapV2Pair pool1,
+        uint256 liquidity1,
+        uint256 amountBaseBuy1,
+        IUniswapV2Pair pool2,
+        uint256 liquidity2,
+        uint256 amountBaseBuy2,
+        IUniswapV2Pair pool3,
+        uint256 liquidity3,
+        uint256 amountBaseBuy3,
+        address to
+    ) external {
+        calibrate(pool1, liquidity1, amountBaseBuy1, to);
+        calibrate(pool2, liquidity2, amountBaseBuy2, to);
+        calibrate(pool3, liquidity3, amountBaseBuy3, to);
+    }
+
     function calibrate2(
         IUniswapV2Pair pool1,
         uint256 liquidity1,
-        uint256 amountBuyback1,
+        uint256 amountBaseBuy1,
         IUniswapV2Pair pool2,
         uint256 liquidity2,
-        uint256 amountBuyback2,
+        uint256 amountBaseBuy2,
         address to
     ) external {
-        calibrate(pool1, liquidity1, amountBuyback1, to);
-        calibrate(pool2, liquidity2, amountBuyback2, to);
+        calibrate(pool1, liquidity1, amountBaseBuy1, to);
+        calibrate(pool2, liquidity2, amountBaseBuy2, to);
     }
 
-    function calibrate(IUniswapV2Pair pool, uint256 liquidity, uint256 amountBuyback, address to) public {
+    function calibrate(
+        IUniswapV2Pair pool,
+        uint256 liquidity,
+        uint256 amountBuy,
+        address to
+    ) public {
         // remove `liquidity`
         IERC20 token = tokenFromPool(pool);
         remove(pool, token, liquidity);
-        // buy gton for `amountBuyback`
-        buyback(pool, token, amountBuyback);
-        // add liquidity for all quote token and have some gton left
+        // buy base for `amountBuy`
+        buy(pool, token, amountBuy);
+        // add liquidity for all quote token and have some base left
         add(pool, token);
-        // send gton and lp to `to`
+        // send base and lp to `to`
         retrieve(pool, to);
     }
 
-    function removeThenBuyback(IUniswapV2Pair pool, uint256 liquidity, uint256 amountBuyback, address to) public {
+    function removeThenBuy(
+        IUniswapV2Pair pool,
+        uint256 liquidity,
+        uint256 amountBuy,
+        address to
+    ) public {
         // remove `liquidity`
         IERC20 token = tokenFromPool(pool);
         remove(pool, token, liquidity);
-        // buy gton for `amountBuyback`
-        buyback(pool, token, amountBuyback);
-        // send gton and lp to `to`
+        // buy base for `amountBuy`
+        buy(pool, token, amountBuy);
+        // send base and lp to `to`
         retrieve(pool, to);
     }
 
-    function remove(IUniswapV2Pair pool, IERC20 token, uint256 liquidity) public {
+    function remove(IUniswapV2Pair pool, IERC20 token, uint256 liquidityRemove) public {
         // transfer `liquidity` from msg.sender
-        pool.transferFrom(msg.sender, address(this), liquidity);
+        pool.transferFrom(msg.sender, address(this), liquidityRemove);
         // log(pool, "=========== before remove ===========");
         uint liquidity = pool.balanceOf(address(this));
         uint totalSupply = pool.totalSupply();
-        uint amount0 = liquidity * gton.balanceOf(address(pool)) / totalSupply;
-        uint amount1 = liquidity * token.balanceOf(address(pool)) / totalSupply;
+        uint kLast = pool.kLast();
+        (uint reserveBase, uint reserveQuote) = getReserves(pool, address(base), address(token));
+        (,,,,uint amountBaseAfter, uint amountQuoteAfter) = estimateRemove(
+            reserveBase,
+            reserveQuote,
+            totalSupply,
+            kLast,
+            liquidity
+        );
         uint deadline = block.timestamp+86400;
         // console.log("remove liquidity", amount0, amount1, liquidity);
         pool.approve(address(router), liquidity);
         router.removeLiquidity(
-            address(gton),
+            address(base),
             address(token),
             liquidity,
-            0,
-            0,
+            amountBaseAfter,
+            amountQuoteAfter,
             address(this),
             deadline
         );
         // log(pool, "===========  after remove ===========");
     }
 
-    function buyback(IUniswapV2Pair pool, IERC20 token, uint256 amountBuyback) public {
+    function buy(IUniswapV2Pair pool, IERC20 token, uint256 amountBuy) public {
         // log(pool, "===========   before buy  ===========");
-        gton.approve(address(router), gton.balanceOf(address(this)));
+        base.approve(address(router), base.balanceOf(address(this)));
         token.approve(address(router), token.balanceOf(address(this)));
-        address[] memory pathToGton = new address[](2);
-        pathToGton[0] = address(token);
-        pathToGton[1] = address(gton);
+        address[] memory pathToBase = new address[](2);
+        pathToBase[0] = address(token);
+        pathToBase[1] = address(base);
         uint deadline = block.timestamp+86400;
-        uint[] memory amounts = router.getAmountsIn(amountBuyback, pathToGton);
-        // console.log("swap gton for token", amountBuyback, amounts[0]);
+        uint[] memory amounts = router.getAmountsIn(amountBuy, pathToBase);
+        // console.log("swap base for token", amountBuy, amounts[0]);
         router.swapTokensForExactTokens(
-            amountBuyback,
+            amountBuy,
             amounts[0],
-            pathToGton,
+            pathToBase,
             address(this),
             deadline
         );
@@ -108,21 +158,21 @@ contract Calibrator is ICalibrator {
 
     function add(IUniswapV2Pair pool, IERC20 token) public {
         // log(pool, "===========   before add  ===========");
-        uint amountTokenAdd = token.balanceOf(address(this));
-        address[] memory pathToGton = new address[](2);
-        pathToGton[0] = address(token);
-        pathToGton[1] = address(gton);
+        uint amountQuoteAdd = token.balanceOf(address(this));
+        address[] memory pathToBase = new address[](2);
+        pathToBase[0] = address(token);
+        pathToBase[1] = address(base);
         uint deadline = block.timestamp+86400;
-        (uint reserveGton, uint reserveToken) = getReserves(pool, address(gton), address(token));
-        uint amountGtonAdd = quote(amountTokenAdd, reserveToken, reserveGton);
-        // console.log("add liquidity", amountGtonAdd, amountTokenAdd);
+        (uint reserveBase, uint reserveQuote) = getReserves(pool, address(base), address(token));
+        uint amountBaseAdd = quote(amountQuoteAdd, reserveQuote, reserveBase);
+        // console.log("add liquidity", amountBaseAdd, amountQuoteAdd);
         (uint amountA, uint amountB, uint liq) = router.addLiquidity(
             address(token),
-            address(gton),
-            amountTokenAdd,
-            amountGtonAdd,
-            amountTokenAdd,
-            amountGtonAdd,
+            address(base),
+            amountQuoteAdd,
+            amountBaseAdd,
+            amountQuoteAdd,
+            amountBaseAdd,
             address(this),
             deadline
         );
@@ -133,143 +183,332 @@ contract Calibrator is ICalibrator {
     function retrieve(IUniswapV2Pair pool, address to) internal {
         // log(pool, "========== before retrieve ==========");
         pool.transfer(to, pool.balanceOf(address(this)));
-        gton.transfer(to, gton.balanceOf(address(this)));
+        base.transfer(to, base.balanceOf(address(this)));
         // log(pool, "==========  after retrieve ==========");
     }
 
     // **** ESTIMATE FUNCTIONS ****
-    function estimateNow(IUniswapV2Pair pool, uint256 liquidity, uint256 amountBuyback)
-        external view returns (
-        uint256 reserveGton,
-        uint256 reserveToken,
-        uint256 amountGton
+    function estimateNow(
+        IUniswapV2Pair pool,
+        uint256 liquidityRemove,
+        uint256 amountBuy
+    ) external view returns (
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 amountBase,
+        uint256 liquidityAfter
     ) {
+        Pool memory pBefore;
+
         IERC20 token = tokenFromPool(pool);
-        (uint256 reserveGtonBefore,
-         uint256 reserveTokenBefore) = getReserves(
+        (pBefore.reserveBase,
+         pBefore.reserveQuote) = getReserves(
             pool,
-            address(gton),
+            address(base),
             address(token)
         );
-        uint256 totalSupplyBefore = pool.totalSupply();
-        (reserveGton,
-         reserveToken,
-         amountGton) = estimate(
-            reserveGtonBefore,
-            reserveTokenBefore,
-            totalSupplyBefore,
-            liquidity,
-            amountBuyback
+        pBefore.totalSupply = pool.totalSupply();
+        pBefore.kLast = pool.kLast();
+
+        (Pool memory pAfter,
+         Wallet memory wAfter
+         ) = estimate(
+            pBefore,
+            liquidityRemove,
+            amountBuy
         );
+
+        return (pAfter.reserveBase,
+                pAfter.reserveQuote,
+                wAfter.amountBase,
+                wAfter.liquidity);
+    }
+    
+    function estimateBuyNow(
+        IUniswapV2Pair pool,
+        uint256 amountBaseBuy
+    ) external view returns (
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 amountTokenSell
+    ) {
+
+        IERC20 token = tokenFromPool(pool);
+        (uint256 reserveBaseBefore,
+         uint256 reserveQuoteBefore) = getReserves(
+            pool,
+            address(base),
+            address(token)
+        );
+
+        (reserveBase,
+         reserveQuote,
+         amountTokenSell
+         ) = estimateBuy(
+            reserveBaseBefore,
+            reserveQuoteBefore,
+            amountBaseBuy
+        );
+
+        return (reserveBase,
+                reserveQuote,
+                amountTokenSell);
+    }
+    
+    function estimateSellNow(
+        IUniswapV2Pair pool,
+        uint256 amountBaseSell
+    ) external view returns (
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 amountTokenBuy
+    ) {
+
+        IERC20 token = tokenFromPool(pool);
+        (uint256 reserveBaseBefore,
+         uint256 reserveQuoteBefore) = getReserves(
+            pool,
+            address(base),
+            address(token)
+        );
+
+        (reserveBase,
+         reserveQuote,
+         amountTokenBuy
+         ) = estimateBuy(
+            reserveBaseBefore,
+            reserveQuoteBefore,
+            amountBaseSell
+        );
+
+        return (reserveBase,
+                reserveQuote,
+                amountTokenBuy);
     }
 
     function estimate(
-        uint256 reserveGtonBefore,
-        uint256 reserveTokenBefore,
-        uint256 totalSupplyBefore,
-        uint256 liquidity,
-        uint256 amountBuyback
-    ) public pure returns (
-        uint256 reserveGton,
-        uint256 reserveToken,
-        uint256 amountGton
+        Pool memory pBefore,
+        uint256 liquidityRemove,
+        uint256 amountBaseBuy
+    ) public view returns (
+        Pool memory pAfter,
+        Wallet memory wAfter
     ) {
-        (uint256 reserveGtonAfterRemove,
-         uint256 reserveTokenAfterRemove,
-         uint256 amountGTONAfterRemove,
-         uint256 amountTokenAfterRemove) = estimateRemove(
-            reserveGtonBefore,
-            reserveTokenBefore,
-            totalSupplyBefore,
-            liquidity
+
+        (Pool memory pAfterRemove,
+         Wallet memory wAfterRemove
+         ) = estimateRemove(
+            pBefore,
+            liquidityRemove
         );
-        (uint256 reserveGtonAfterBuyback,
-         uint256 reserveTokenAfterBuyback,
-         uint256 amountTokenIn) = estimateBuyback(
-            reserveGtonAfterRemove,
-            reserveTokenAfterRemove,
-            amountBuyback
+
+        (Pool memory pAfterBuy,
+         Wallet memory wAfterBuy,
+        ) = estimateBuy(
+            pAfterRemove,
+            wAfterRemove,
+            amountBaseBuy
         );
-        uint256 amountGtonAdd;
-        (reserveGton,
-         reserveToken,
-         amountGtonAdd) = estimateAdd(
-            reserveGtonAfterBuyback,
-            reserveTokenAfterBuyback,
-            amountTokenAfterRemove - amountTokenIn
+
+        (Pool memory pAfterAdd,
+         Wallet memory wAfterAdd
+         ) = estimateAdd(
+            pAfterBuy,
+            wAfterBuy
         );
-        amountGton = amountGTONAfterRemove + amountBuyback - amountGtonAdd;
+
+        pAfter = pAfterAdd;
+        wAfter = wAfterAdd;
     }
 
     function estimateRemove(
-        uint256 reserveGton,
-        uint256 reserveToken,
-        uint256 totalSupply,
-        uint256 liquidity
-    ) public pure returns (
-        uint256 reserveGtonAfterRemove,
-        uint256 reserveTokenAfterRemove,
-        uint256 amountGtonAfterRemove,
-        uint256 amountTokenAfterRemove
+        Pool memory pBefore,
+        uint256 liquidityRemove
+    ) public view returns (
+        Pool memory pAfter,
+        Wallet memory wAfter
     ) {
-        amountGtonAfterRemove = liquidity * reserveGton / totalSupply;
-        amountTokenAfterRemove = liquidity * reserveToken / totalSupply;
-        reserveGtonAfterRemove = reserveGton - amountGtonAfterRemove;
-        reserveTokenAfterRemove = reserveToken - amountTokenAfterRemove;
-        //console.log("after remove", reserveGtonAfterRemove, reserveTokenAfterRemove);
+        pAfter = pBefore;
+
+        uint256 reserveBase = pBefore.reserveBase;
+        uint256 reserveQuote = pBefore.reserveQuote;
+        uint256 totalSupply = pBefore.totalSupply;
+        uint256 kLast = pBefore.kLast;
+
+        totalSupply = mintFee(reserveBase, reserveQuote, totalSupply, kLast);
+
+        uint256 amountBase = (liquidityRemove * reserveBase) / totalSupply;
+        uint256 amountQuote = (liquidityRemove * reserveQuote) / totalSupply;
+
+        pAfter.totalSupply = totalSupply - liquidityRemove;
+
+        wAfter.amountBase = amountBase;
+        wAfter.amountQuote = amountQuote;
+
+        pAfter.reserveBase = reserveBase - amountBase;
+        pAfter.reserveQuote = reserveQuote - amountQuote;
+
+        pAfter.kLast = pAfter.reserveBase * pAfter.reserveQuote;
     }
 
-    function estimateSell(
-        uint256 reserveGton,
-        uint256 reserveToken,
-        uint256 amountSell
-    ) public pure returns (
-        uint256 reserveGtonAfterSell,
-        uint256 reserveTokenAfterSell,
-        uint256 amountToken
+    function estimateBuy(
+        Pool memory pBefore,
+        Wallet memory wBefore,
+        uint256 amountBaseBuy
+    ) public view returns (
+        Pool memory pAfter,
+        Wallet memory wAfter,
+        uint256 amountTokenSell
     ) {
-        amountToken = getAmountOut(
-            amountSell,
-            reserveGton,
-            reserveToken
-        );
-        reserveGtonAfterSell = reserveGton + amountSell;
-        reserveTokenAfterSell = reserveToken - amountToken;
-    }
+        pAfter = pBefore;
+        wAfter = wBefore;
 
-    function estimateBuyback(
-        uint256 reserveGton,
-        uint256 reserveToken,
-        uint256 amountBuyback
-    ) public pure returns (
-        uint256 reserveGtonAfterBuyback,
-        uint256 reserveTokenAfterBuyback,
-        uint256 amountToken
-    ) {
-        amountToken = getAmountIn(
-            amountBuyback,
-            reserveToken,
-            reserveGton
+        amountTokenSell = getAmountIn(
+            amountBaseBuy,
+            pBefore.reserveQuote,
+            pBefore.reserveBase
         );
-        //console.log("swap gton for token", amountBuyback, amountToken);
-        reserveGtonAfterBuyback = reserveGton - amountBuyback;
-        reserveTokenAfterBuyback = reserveToken + amountToken;
-        //console.log("after buyback", reserveGtonAfterBuyback, reserveTokenAfterBuyback);
+        // console.log("swap base for token", amountBaseBuy, amountTokensell);
+
+        wAfter.amountBase = wBefore.amountBase + amountBaseBuy;
+        wAfter.amountQuote = wBefore.amountQuote - amountTokenSell;
+        pAfter.reserveBase = pBefore.reserveBase - amountBaseBuy;
+        pAfter.reserveQuote = pBefore.reserveQuote + amountTokenSell;
+        // console.log("reserves after buy", pAfter.reserveBase, pAfter.reserveQuote);
     }
 
     function estimateAdd(
-        uint256 reserveGton,
-        uint256 reserveToken,
-        uint256 amountTokenAdd
-    ) public pure returns (
-        uint256 reserveGtonAfterAdd,
-        uint256 reserveTokenAfterAdd,
-        uint256 amountGtonAdd
+        Pool memory pBefore,
+        Wallet memory wBefore
+    ) public view returns (
+        Pool memory pAfter,
+        Wallet memory wAfter
     ) {
-        amountGtonAdd = quote(amountTokenAdd, reserveToken, reserveGton);
-        reserveGtonAfterAdd = reserveGton + amountGtonAdd;
-        reserveTokenAfterAdd = reserveToken + amountTokenAdd;
-        //console.log("after add", reserveGtonAfterAdd, reserveTokenAfterAdd);
+        pAfter = pBefore;
+        wAfter = wBefore;
+
+        uint256 reserveBase = pBefore.reserveBase;
+        uint256 reserveQuote = pBefore.reserveQuote;
+        uint256 totalSupply = pBefore.totalSupply;
+        uint256 kLast = pBefore.kLast;
+        uint256 amountQuoteAdd = wBefore.amountQuote;
+
+        uint256 amountBaseAdd = quote(amountQuoteAdd, reserveQuote, reserveBase);
+        wAfter.amountBase = wBefore.amountBase - amountBaseAdd;
+        wAfter.amountQuote = wBefore.amountQuote - amountQuoteAdd;
+
+        totalSupply = mintFee(reserveBase, reserveQuote, totalSupply, kLast);
+
+        uint256 liquidity = min(
+            (amountBaseAdd * totalSupply) / reserveBase,
+            (amountQuoteAdd * totalSupply) / reserveQuote
+        );
+
+        wAfter.liquidity = liquidity;
+        pAfter.totalSupply = totalSupply + liquidity;
+
+        pAfter.reserveBase = reserveBase + amountBaseAdd;
+        pAfter.reserveQuote = reserveQuote + amountQuoteAdd;
+
+        pAfter.kLast = pAfter.reserveBase * pAfter.reserveQuote;
+    }
+
+    // **** STEP FUNCTIONS ****
+    function estimateRemove(
+        uint256 reserveBaseBefore,
+        uint256 reserveQuoteBefore,
+        uint256 totalSupplyBefore,
+        uint256 kLastBefore,
+        uint256 liquidityRemove
+    ) public view returns (
+        uint256 reserveBaseAfter,
+        uint256 reserveQuoteAfter,
+        uint256 totalSupplyAfter,
+        uint256 kLastAfter,
+        uint256 amountBaseAfter,
+        uint256 amountQuoteAfter
+    ) {
+        uint256 totalSupply = mintFee(reserveBaseBefore, reserveQuoteBefore, totalSupplyBefore, kLastBefore);
+
+        amountBaseAfter = (liquidityRemove * reserveBaseBefore) / totalSupply;
+        amountQuoteAfter = (liquidityRemove * reserveQuoteBefore) / totalSupply;
+
+        totalSupplyAfter = totalSupplyBefore - liquidityRemove;
+
+        reserveBaseAfter = reserveBaseBefore - amountBaseAfter;
+        reserveQuoteAfter = reserveQuoteBefore - amountQuoteAfter;
+
+        kLastAfter = reserveBaseAfter * reserveQuoteAfter;
+    }
+
+    function estimateBuy(
+        uint256 reserveBaseBefore,
+        uint256 reserveQuoteBefore,
+        uint256 amountBaseBuy
+    ) public pure returns (
+        uint256 reserveBaseAfter,
+        uint256 reserveQuoteAfter,
+        uint256 amountQuoteSell
+    ) {
+
+        amountQuoteSell = getAmountIn(
+            amountBaseBuy,
+            reserveQuoteBefore,
+            reserveBaseBefore
+        );
+
+        reserveBaseAfter = reserveBaseBefore - amountBaseBuy;
+        reserveQuoteAfter = reserveQuoteBefore + amountQuoteSell;
+    }
+
+    function estimateSell(
+        uint256 reserveBaseBefore,
+        uint256 reserveQuoteBefore,
+        uint256 amountBaseSell
+    ) public pure returns (
+        uint256 reserveBaseAfter,
+        uint256 reserveQuoteAfter,
+        uint256 amountQuoteBuy
+    ) {
+        amountQuoteBuy = getAmountOut(
+            amountBaseSell,
+            reserveBaseBefore,
+            reserveQuoteBefore
+        );
+        reserveBaseAfter = reserveBaseBefore + amountBaseSell;
+        reserveQuoteAfter = reserveQuoteBefore - amountQuoteBuy;
+    }
+
+    function estimateAdd(
+        uint256 reserveBaseBefore,
+        uint256 reserveQuoteBefore,
+        uint256 totalSupplyBefore,
+        uint256 kLastBefore,
+        uint256 amountQuoteAdd
+    ) public view returns (
+        uint256 reserveBaseAfter,
+        uint256 reserveQuoteAfter,
+        uint256 totalSupplyAfter,
+        uint256 kLastAfter,
+        uint256 amountBaseAdd,
+        uint256 liquidity
+    ) {
+
+        amountBaseAdd = quote(amountQuoteAdd, reserveQuoteBefore, reserveBaseBefore);
+
+        uint256 totalSupply = mintFee(reserveBaseBefore, reserveQuoteBefore, totalSupplyBefore, kLastBefore);
+
+        liquidity = min(
+            (amountBaseAdd * totalSupplyAfter) / reserveBaseBefore,
+            (amountQuoteAdd * totalSupplyAfter) / reserveQuoteBefore
+        );
+
+        totalSupplyAfter = totalSupply + liquidity;
+
+        reserveBaseAfter = reserveBaseBefore + amountBaseAdd;
+        reserveQuoteAfter = reserveQuoteBefore + amountQuoteAdd;
+
+        kLastAfter = reserveBaseAfter * reserveQuoteAfter;
     }
 
     // **** LIBRARY FUNCTIONS ****
@@ -301,8 +540,8 @@ contract Calibrator is ICalibrator {
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public pure returns (uint amountOut) {
-        require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        // require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
+        // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
         uint amountInWithFee = amountIn * 997;
         uint numerator = amountInWithFee * reserveOut;
         uint denominator = (reserveIn * 1000) + amountInWithFee;
@@ -311,8 +550,8 @@ contract Calibrator is ICalibrator {
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public pure returns (uint amountIn) {
-        require(amountOut > 0, 'UniswapV2Library: INSUFFICIENT_OUTPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        // require(amountOut > 0, 'UniswapV2Library: INSUFFICIENT_OUTPUT_AMOUNT');
+        // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
         uint numerator = reserveIn * amountOut * 1000;
         uint denominator = (reserveOut - amountOut) * 997;
         amountIn = (numerator / denominator) + 1;
@@ -321,7 +560,70 @@ contract Calibrator is ICalibrator {
     function tokenFromPool(IUniswapV2Pair pool) public view returns (IERC20 token) {
         address token0 = pool.token0();
         address token1 = pool.token1();
-        token = token0 == address(gton) ? IERC20(token1) : IERC20(token0);
+        token = token0 == address(base) ? IERC20(token1) : IERC20(token0);
+    }
+
+    function sqrt(uint256 a) internal pure returns (uint256 b) {
+        if (a > 3) {
+            b = a;
+            uint256 x = a / 2 + 1;
+            while (x < b) {
+                b = x;
+                x = (a / x + x) / 2;
+            }
+        } else if (a != 0) {
+            b = 1;
+        }
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a <= b ? a : b;
+    }
+
+    function equal(string memory a, string memory b)
+        public
+        pure
+        returns (bool)
+    {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+
+    function mintFee(
+        uint256 reserve0,
+        uint256 reserve1,
+        uint256 totalSupply,
+        uint256 kLast
+    ) internal view returns (
+        uint256 totalSupplyNew
+    ) {
+        if (equal(dex, "MDEX")) {
+            if (kLast != 0) {
+                uint rootK = sqrt(reserve0 * reserve1);
+                uint rootKLast = sqrt(kLast);
+                if (rootK > rootKLast) {
+                    uint numerator = totalSupply * (rootK - rootKLast);
+                    uint denominator = rootKLast;
+                    uint liquidityFee = numerator / denominator;
+                    if (liquidityFee > 0) {
+                        totalSupply += liquidityFee;
+                    }
+                }
+            }
+        } else if (equal(dex, "QUICK")) {
+            if (kLast != 0) {
+                uint rootK = sqrt(reserve0 * reserve1);
+                uint rootKLast = sqrt(kLast);
+                if (rootK > rootKLast) {
+                    uint numerator = totalSupply * (rootK - rootKLast);
+                    uint denominator = (rootK * 5) + rootKLast;
+                    uint liquidityFee = numerator / denominator;
+                    if (liquidityFee > 0) {
+                        totalSupply += liquidityFee;
+                    }
+                }
+            }
+        }
+        return totalSupply;
     }
 
     // **** RECLAIM FUNCTION ****
@@ -341,21 +643,21 @@ contract Calibrator is ICalibrator {
     //     console.log(s);
     //     console.log(
     //         "balances",
-    //         gton.balanceOf(address(this)),
+    //         base.balanceOf(address(this)),
     //         token.balanceOf(address(this))
     //     );
     //     console.log(
     //         "reserves",
-    //         gton.balanceOf(address(pool)),
+    //         base.balanceOf(address(pool)),
     //         token.balanceOf(address(pool))
     //     );
-    //     address[] memory pathToToken = new address[](2);
-    //     pathToToken[0] = address(gton);
-    //     pathToToken[1] = address(token);
-    //     uint[] memory quotes = router.getAmountsOut(1e4, pathToToken);
-    //     console.log("for 10000 gton", quotes[1], "token");
-    //     console.log(quotes[1], "/", quotes[0], quotes[1]/quotes[0]);
-    //     console.log(quotes[0], "/", quotes[1], quotes[1]==0 ? 0 : quotes[0]/quotes[1]);
+    //     address[] memory pathToQuote = new address[](2);
+    //     pathToQuote[0] = address(base);
+    //     pathToQuote[1] = address(token);
+    //     uint[] memory tokens = router.getAmountsOut(1e4, pathToQuote);
+    //     console.log("for 10000 base", tokens[1], "token");
+    //     console.log(tokens[1], "/", tokens[0], tokens[1]/tokens[0]);
+    //     console.log(tokens[0], "/", tokens[1], tokens[1]==0 ? 0 : tokens[0]/tokens[1]);
     //     console.log("=====================================");
     // }
 }

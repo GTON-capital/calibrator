@@ -140,7 +140,7 @@ const uniswapFixture: Fixture<UniswapFixture> =
   block = await wallet.provider.getBlock("latest")
   timestamp = block.timestamp
   let k = await uniswapV2PairGTON_USDC.kLast()
-  console.log(k.toString())
+  // console.log(k.toString())
   await uniswapV2Router01.addLiquidity(
     gton.address,
     usdc.address,
@@ -153,7 +153,7 @@ const uniswapFixture: Fixture<UniswapFixture> =
   )
 
   k = await uniswapV2PairGTON_USDC.kLast()
-  console.log(k.toString())
+  // console.log(k.toString())
   liquidityGTON = BigNumber.from(1)
   liquidityUSDC = BigNumber.from(5)
   await gton.transfer(other.address, liquidityGTON)
@@ -220,10 +220,10 @@ const uniswapFixture: Fixture<UniswapFixture> =
     timestamp + 3600,
     {value: liquidityWETH}
   )
-  console.log(
-    "lp balance",
-    (await mdexPairGTON_WETH.balanceOf(wallet.address)).toString()
-  )
+  // console.log(
+  //   "lp balance",
+  //   (await mdexPairGTON_WETH.balanceOf(wallet.address)).toString()
+  // )
 
   liquidityGTON = BigNumber.from("7331475806")
   liquidityWETH = BigNumber.from("3")
@@ -287,13 +287,13 @@ export const calibratorFixture: Fixture<CalibratorFixture> =
     const calibrator = (await calibratorFactory.deploy(
       gton.address,
       uniswapV2Router01.address,
-      "ffffffff"
+      "QUICK"
     )) as Calibrator
 
     const calibratorMdex = (await calibratorFactory.deploy(
       gton.address,
       mdexRouter.address,
-      "ffffffff"
+      "MDEX"
     )) as Calibrator
 
     return {

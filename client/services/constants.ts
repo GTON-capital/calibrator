@@ -21,6 +21,15 @@ export interface Constants {
     mdex_pool_GTON_HT: string
     mdex_router: string
     mdex_factory: string
+    bsc_gton: string
+    bsc_safe: string
+    bsc_wbnb: string
+    bsc_busd: string
+    calibrator_bsc: string
+    cake_pool_GTON_WBNB: string
+    cake_pool_GTON_BUSD: string
+    cake_router: string
+    cake_factory: string
 }
 
 export const C: Constants = {
@@ -39,11 +48,20 @@ export const C: Constants = {
     rpc_hec: 'https://http-mainnet.hecochain.com',
     gton_hec: '0x922d641a426dcffaef11680e5358f34d97d112e1',
     safe_hec: '0xced486e3905f8fe1e8af5d1791f5e7ad7915f01a',
-    calibrator_hec: '0x1C43a3852D73E2f3440744A6156092e915c5f362',
+    calibrator_hec: '0x04349651DE1e886d8DC534FabFf5cFe6bc756c0E',
     ht_hec: '0x5545153ccfca01fbd7dd11c0b23ba694d9509a6f',
     mdex_pool_GTON_HT: '0x071f1ea3f4cdecbdc8ab49867c7c7bf44fa25143',
     mdex_router: '0xed7d5f38c79115ca12fe6c0041abb22f0a06c300',
-    mdex_factory: '0xb0b670fc1F7724119963018DB0BfA86aDb22d941'
+    mdex_factory: '0xb0b670fc1F7724119963018DB0BfA86aDb22d941',
+    bsc_gton: '0x64d5baf5ac030e2b7c435add967f787ae94d0205',
+    bsc_safe: '0x93B443d1f4081b58dE5ca637D63E49880C04ac4a',
+    bsc_wbnb: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+    bsc_busd: '0xe9e7cea3dedca5984780bafc599bd69add087d56',
+    calibrator_bsc: '',
+    cake_pool_GTON_WBNB: '0xA216571b69dd69600F50992f7c23b07B1980CfD8',
+    cake_pool_GTON_BUSD: '0xbe2c760aE00CbE6A5857cda719E74715edC22279',
+    cake_router: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+    cake_factory: '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
 }
 
 export const tokens = [
@@ -70,7 +88,9 @@ export const pools = [
     {name: "Quick GTON-WMATIC", value: C.quick_pool_GTON_WMATIC}
 ]
 export const rpcs = [
-    {name: "PLG", value: C.rpc_plg}
+    {name: "PLG", value: C.rpc_plg},
+    {name: "PLG", value: C.rpc_bsc},
+    {name: "PLG", value: C.rpc_hec}
 ]
 
  const template_plg_usdc = {
@@ -97,8 +117,21 @@ export const rpcs = [
      pool: C.mdex_pool_GTON_HT,
      rpc: C.rpc_hec
  }
+ const template_bsc_bnb = {
+     name: "BSC GTON-BNB",
+     gton: C.bsc_gton,
+     safe: C.bsc_safe,
+     calibrator: C.calibrator_bsc,
+     token: C.bsc_wbnb,
+     decimals: 18,
+     router: C.cake_router,
+     factory: C.cake_factory,
+     pool: C.cake_pool_GTON_WBNB,
+     rpc: C.rpc_bsc
+ }
 
 export const templates = [
     template_plg_usdc,
-    template_hec_ht
+    template_hec_ht,
+    template_bsc_bnb
 ]

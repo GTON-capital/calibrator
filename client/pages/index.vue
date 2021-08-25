@@ -38,7 +38,7 @@
                     <option v-for="pu in calibrators" v-bind:value="pu.value">{{pu.name}}</option>
                 </datalist>
                 <Button class='button--green' size="large" ghost @click="update">Update</Button>
-                <div> Pool GTON-USDC</div>
+                <div> Pool Base-USDC</div>
                 <div> Total supply: {{ totalSupply }},
                     LP on safe: {{ safeLiquidity }}</div>
                 <br>
@@ -47,9 +47,9 @@
                     <thead>
                         <tr>
                             <td></td>
-                            <td>GTON</td>
+                            <td>Base</td>
                             <td>USDC</td>
-                            <td>reserve GTON</td>
+                            <td>reserve Base</td>
                             <td>reserve USDC</td>
                             <td>price</td>
                         </tr>
@@ -59,41 +59,41 @@
                             <td>Current state</td>
                             <td>0</td>
                             <td>0</td>
-                            <td>{{ formatUnits(reserveGTON, 18) }}</td>
+                            <td>{{ formatUnits(reserveBase, 18) }}</td>
                             <td>{{ formatUnits(reserveToken, decimals) }}</td>
-                            <td>1 GTON = {{ price }} USDC</td>
+                            <td>1 Base = {{ price }} USDC</td>
                         </tr>
                         <tr>
                             <td>After remove</td>
-                            <td>{{ formatUnits(amountGTON_afterRemove, 18) }}</td>
+                            <td>{{ formatUnits(amountBase_afterRemove, 18) }}</td>
                             <td>{{ formatUnits(amountToken_afterRemove, decimals) }}</td>
-                            <td>{{ formatUnits(reserveGTON_afterRemove, 18) }}</td>
+                            <td>{{ formatUnits(reserveBase_afterRemove, 18) }}</td>
                             <td>{{ formatUnits(reserveToken_afterRemove, decimals) }}</td>
-                            <td>1 GTON = {{ price_afterRemove }} USDC</td>
+                            <td>1 Base = {{ price_afterRemove }} USDC</td>
                         </tr>
                         <tr>
-                            <td>After buyback</td>
-                            <td>{{ formatUnits(amountGTON_afterBuyback, 18) }}</td>
-                            <td>{{ formatUnits(amountToken_afterBuyback, decimals) }}</td>
-                            <td>{{ formatUnits(reserveGTON_afterBuyback, 18) }}</td>
-                            <td>{{ formatUnits(reserveToken_afterBuyback, decimals) }}</td>
-                            <td>1 GTON = {{ price_afterBuyback }} USDC</td>
+                            <td>After amount</td>
+                            <td>{{ formatUnits(amountBase_afterBuy, 18) }}</td>
+                            <td>{{ formatUnits(amountToken_afterBuy, decimals) }}</td>
+                            <td>{{ formatUnits(reserveBase_afterBuy, 18) }}</td>
+                            <td>{{ formatUnits(reserveToken_afterBuy, decimals) }}</td>
+                            <td>1 Base = {{ price_afterBuy }} USDC</td>
                         </tr>
                         <tr>
                             <td>After add</td>
-                            <td>{{ formatUnits(amountGTON_afterAdd, 18) }}</td>
+                            <td>{{ formatUnits(amountBase_afterAdd, 18) }}</td>
                             <td>{{ formatUnits(amountToken_afterAdd, decimals) }}</td>
-                            <td>{{ formatUnits(reserveGTON_afterAdd, 18) }}</td>
+                            <td>{{ formatUnits(reserveBase_afterAdd, 18) }}</td>
                             <td>{{ formatUnits(reserveToken_afterAdd, decimals) }}</td>
-                            <td>1 GTON = {{ price_afterAdd }} USDC</td>
+                            <td>1 Base = {{ price_afterAdd }} USDC</td>
                         </tr>
                     </tbody>
                 </table>
                 <br>
                 <div> Liquidity: <input v-model="liquidity" placeholder=" lp tokens"></div>
-                <div> Buyback: <input v-model="buyback" placeholder="buyback GTON"></div>
-                <Button class='button--green' size="large" ghost @click="estimate">Estimate</Button>
-                <Button class='button--green' size="large" ghost @click="buybackNow">Just buyback</Button>
+                <div> Amount: <input v-model="amount" placeholder="amount Base"></div>
+                <Button class='button--green' size="large" ghost @click="estimate">Calibrate</Button>
+                <Button class='button--green' size="large" ghost @click="buyNow">Just buy</Button>
                 <Button class='button--green' size="large" ghost @click="sellNow">Just sell</Button>
                 <div> {{ error }}</div>
             </div>
@@ -130,26 +130,26 @@
              decimals: 6,
              safeLiquidity: BigNumber.from(0),
              totalSupply: BigNumber.from(0),
-             reserveGTON: BigNumber.from(0),
+             reserveBase: BigNumber.from(0),
              reserveToken: BigNumber.from(0),
              price: 0,
-             amountGTON_afterRemove: BigNumber.from(0),
+             amountBase_afterRemove: BigNumber.from(0),
              amountToken_afterRemove: BigNumber.from(0),
-             reserveGTON_afterRemove: BigNumber.from(0),
+             reserveBase_afterRemove: BigNumber.from(0),
              reserveToken_afterRemove: BigNumber.from(0),
              price_afterRemove: 0,
-             amountGTON_afterBuyback: BigNumber.from(0),
-             amountToken_afterBuyback: BigNumber.from(0),
-             reserveGTON_afterBuyback: BigNumber.from(0),
-             reserveToken_afterBuyback: BigNumber.from(0),
-             price_afterBuyback: 0,
-             amountGTON_afterAdd: BigNumber.from(0),
+             amountBase_afterBuy: BigNumber.from(0),
+             amountToken_afterBuy: BigNumber.from(0),
+             reserveBase_afterBuy: BigNumber.from(0),
+             reserveToken_afterBuy: BigNumber.from(0),
+             price_afterBuy: 0,
+             amountBase_afterAdd: BigNumber.from(0),
              amountToken_afterAdd: BigNumber.from(0),
-             reserveGTON_afterAdd: BigNumber.from(0),
+             reserveBase_afterAdd: BigNumber.from(0),
              reserveToken_afterAdd: BigNumber.from(0),
              price_afterAdd: 0,
              liquidity: "10000000000000000",
-             buyback: "300000000000000000000",
+             amount: "300000000000000000000",
              error: ""
          }
      },
@@ -165,23 +165,23 @@
          async update () {
              // clear so that errors are evident
              this.safeLiquidity = BigNumber.from(0)
-             this.reserveGTON = BigNumber.from(0)
+             this.reserveBase = BigNumber.from(0)
              this.reserveToken = BigNumber.from(0)
              this.price = 0
 
              try {
              this.safeLiquidity = await this.invoker.safeLiquidity(this.rpc, this.pool, this.safe)
              this.totalSupply = await this.invoker.totalSupply(this.rpc, this.pool)
-             this.reserveGTON = await this.invoker.reserve(this.rpc, this.pool, this.gton)
+             this.reserveBase = await this.invoker.reserve(this.rpc, this.pool, this.gton)
              this.reserveToken = await this.invoker.reserve(this.rpc, this.pool, this.token)
-             if (this.reserveGTON != 0) {
-                 console.log(this.decimals.toString())
-                 console.log(this.reserveToken.toString())
-                 console.log(this.reserveToken.mul(10**(18-(this.decimals))).toString())
-                 console.log(this.reserveGTON.toString())
-                 console.log(this.reserveToken.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveGTON).toString())
-                 this.price = this.reserveToken.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveGTON).toNumber() / (10**5)
-                 console.log(this.price.toString())
+             if (this.reserveBase != 0) {
+                 // console.log(this.decimals.toString())
+                 // console.log(this.reserveToken.toString())
+                 // console.log(this.reserveToken.mul(10**(18-(this.decimals))).toString())
+                 // console.log(this.reserveBase.toString())
+                 // console.log(this.reserveToken.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveBase).toString())
+                 this.price = this.reserveToken.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveBase).toNumber() / (10**5)
+                 // console.log(this.price.toString())
              }
              }    catch(e) { console.log(e) }
          },
@@ -197,19 +197,19 @@
          },
          async estimate () {
              // clear so that errors are evident
-             this.amountGTON_afterRemove = BigNumber.from(0)
+             this.amountBase_afterRemove = BigNumber.from(0)
              this.amountToken_afterRemove = BigNumber.from(0)
-             this.reserveGTON_afterRemove = BigNumber.from(0)
+             this.reserveBase_afterRemove = BigNumber.from(0)
              this.reserveToken_afterRemove = BigNumber.from(0)
              this.price_afterRemove = 0
-             this.amountGTON_afterBuyback = BigNumber.from(0)
-             this.amountToken_afterBuyback = BigNumber.from(0)
-             this.reserveGTON_afterBuyback = BigNumber.from(0)
-             this.reserveToken_afterBuyback = BigNumber.from(0)
-             this.price_afterBuyback = 0
-             this.amountGTON_afterAdd = BigNumber.from(0)
+             this.amountBase_afterBuy = BigNumber.from(0)
+             this.amountToken_afterBuy = BigNumber.from(0)
+             this.reserveBase_afterBuy = BigNumber.from(0)
+             this.reserveToken_afterBuy = BigNumber.from(0)
+             this.price_afterBuy = 0
+             this.amountBase_afterAdd = BigNumber.from(0)
              this.amountToken_afterAdd = BigNumber.from(0)
-             this.reserveGTON_afterAdd = BigNumber.from(0)
+             this.reserveBase_afterAdd = BigNumber.from(0)
              this.reserveToken_afterAdd = BigNumber.from(0)
              this.price_afterAdd = 0
              this.error = ""
@@ -222,12 +222,14 @@
                      this.token,
                      this.liquidity
                  )
-                 this.reserveGTON_afterRemove = result[0]
+                 this.reserveBase_afterRemove = result[0]
                  this.reserveToken_afterRemove = result[1]
-                 this.amountGTON_afterRemove = result[2]
-                 this.amountToken_afterRemove = result[3]
-                 if (this.reserveGTON_afterRemove != 0) {
-                     this.price_afterRemove = this.reserveToken_afterRemove.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveGTON_afterRemove) / (10**5)
+                 this.totalSupply = result[2]
+                 this.kLast = result[3]
+                 this.amountBase_afterRemove = result[4]
+                 this.amountToken_afterRemove = result[5]
+                 if (this.reserveBase_afterRemove != 0) {
+                     this.price_afterRemove = this.reserveToken_afterRemove.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveBase_afterRemove) / (10**5)
                  }
              } catch(e) {
                  this.error = "remove: " + e
@@ -235,24 +237,24 @@
                  return
              }
              try {
-                 let result = await this.invoker.estimateBuyback(
+                 let result = await this.invoker.estimateBuy(
                      this.rpc,
                      this.calibrator,
-                     this.reserveGTON_afterRemove,
+                     this.reserveBase_afterRemove,
                      this.reserveToken_afterRemove,
-                     this.buyback
+                     this.amount
                  )
-                 this.reserveGTON_afterBuyback = result[0]
-                 this.reserveToken_afterBuyback = result[1]
+                 this.reserveBase_afterBuy = result[0]
+                 this.reserveToken_afterBuy = result[1]
                  let amountToken = result[2]
-                 this.amountGTON_afterBuyback = this.amountGTON_afterRemove.add(this.buyback)
+                 this.amountBase_afterBuy = this.amountBase_afterRemove.add(this.amount)
                  if (this.amountToken_afterRemove.lt(amountToken)) { throw "not enough token" }
-                 this.amountToken_afterBuyback = this.amountToken_afterRemove.sub(amountToken)
-                 if (this.reserveGTON_afterBuyback != 0) {
-                     this.price_afterBuyback = this.reserveToken_afterBuyback.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveGTON_afterBuyback) / (10**5)
+                 this.amountToken_afterBuy = this.amountToken_afterRemove.sub(amountToken)
+                 if (this.reserveBase_afterBuy != 0) {
+                     this.price_afterBuy = this.reserveToken_afterBuy.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveBase_afterBuy) / (10**5)
                  }
              } catch(e) {
-                 this.error = "buyback: " + e
+                 this.error = "amount: " + e
                  console.log(e)
                  return
              }
@@ -260,66 +262,74 @@
                  let result = await this.invoker.estimateAdd(
                      this.rpc,
                      this.calibrator,
-                     this.reserveGTON_afterBuyback,
-                     this.reserveToken_afterBuyback,
-                     this.amountToken_afterBuyback)
-                 this.reserveGTON_afterAdd = result[0]
+                     this.reserveBase_afterBuy,
+                     this.reserveToken_afterBuy,
+                     this.totalSupply,
+                     this.kLast,
+                     this.amountToken_afterBuy)
+                 this.reserveBase_afterAdd = result[0]
                  this.reserveToken_afterAdd = result[1]
-                 let amountGTON = result[2]
-                 this.amountGTON_afterAdd = this.amountGTON_afterBuyback.sub(amountGTON)
+                 let amountBase = result[2]
+                 this.amountBase_afterAdd = this.amountBase_afterBuy.sub(amountBase)
                  this.amountToken_afterAdd = BigNumber.from(0)
-                 if (this.reserveGTON_afterAdd != 0) {
-                     this.price_afterAdd = this.reserveToken_afterAdd.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveGTON_afterAdd) / (10**5)
+                 if (this.reserveBase_afterAdd != 0) {
+                     this.price_afterAdd = this.reserveToken_afterAdd.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveBase_afterAdd) / (10**5)
                  }
              } catch(e) {
                  this.error = "add: " + e
                  console.log(e)
              }
          },
-         async buybackNow() {
+         async buyNow() {
              try {
-                 let result = await this.invoker.estimateBuybackNow(
+                 let result = await this.invoker.estimateBuyNow(
                      this.rpc,
                      this.calibrator,
                      this.pool,
                      this.gton,
                      this.token,
-                     this.buyback
+                     this.amount
                  )
-                 this.reserveGTON_afterRemove = result[0]
+                 this.reserveBase_afterRemove = result[0]
                  this.reserveToken_afterRemove = result[1]
-                 this.reserveGTON_afterBuyback = result[2]
-                 this.reserveToken_afterBuyback = result[3]
+                 this.reserveBase_afterBuy = result[2]
+                 this.reserveToken_afterBuy = result[3]
                  let amountToken = result[4]
-                 console.log(amountToken)
-                 this.amountGTON_afterBuyback = this.amountGTON_afterRemove.add(this.buyback)
-                 this.amountToken_afterBuyback = this.amountToken_afterRemove.sub(amountToken)
-                 if (this.reserveGTON_afterBuyback != 0) {
-                     this.price_afterBuyback = this.reserveToken_afterBuyback.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveGTON_afterBuyback) / (10**5)
+                 // console.log(amountToken)
+                 this.amountBase_afterBuy = this.amountBase_afterRemove.add(this.amount)
+                 this.amountToken_afterBuy = this.amountToken_afterRemove.sub(amountToken)
+                 if (this.reserveBase_afterBuy != 0) {
+                     this.price_afterBuy = this.reserveToken_afterBuy.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveBase_afterBuy) / (10**5)
                  }
              } catch(e) {
-                 this.error = "buyback: " + e
+                 this.error = "buy: " + e
                  console.log(e)
                  return
              }
          },
          async sellNow() {
              try {
-                 let reserveGTON = await this.invoker.reserve(this.rpc, this.pool, this.gton)
-                 let reserveToken = await this.invoker.reserve(this.rpc, this.pool, this.token)
-                 let amountInWithFee = BigNumber.from(this.buyback).mul(BigNumber.from(997))
-                 let numerator = amountInWithFee.mul(reserveToken)
-                 let denominator = reserveGTON.mul(1000).add(amountInWithFee)
-                 let amountToken = numerator.div(denominator)
-                 this.amountGTON_afterBuyback = this.amountGTON_afterRemove.sub(this.buyback)
-                 this.amountToken_afterBuyback = this.amountToken_afterRemove.add(amountToken)
-                 this.reserveGTON_afterBuyback = reserveGTON.add(this.buyback)
-                 this.reserveToken_afterBuyback = reserveToken.sub(amountToken)
-                 if (this.reserveGTON_afterBuyback != 0) {
-                     this.price_afterBuyback = this.reserveToken_afterBuyback.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveGTON_afterBuyback) / (10**5)
+                 let result = await this.invoker.estimateSellNow(
+                     this.rpc,
+                     this.calibrator,
+                     this.pool,
+                     this.gton,
+                     this.token,
+                     this.amount
+                 )
+                 this.reserveBase_afterRemove = result[0]
+                 this.reserveToken_afterRemove = result[1]
+                 this.reserveBase_afterBuy = result[2]
+                 this.reserveToken_afterBuy = result[3]
+                 let amountToken = result[4]
+                 // console.log(amountToken)
+                 this.amountBase_afterBuy = this.amountBase_afterRemove.sub(this.amount)
+                 this.amountToken_afterBuy = this.amountToken_afterRemove.add(amountToken)
+                 if (this.reserveBase_afterBuy != 0) {
+                     this.price_afterBuy = this.reserveToken_afterBuy.mul(10**(18-(this.decimals))).mul(10**5).div(this.reserveBase_afterBuy) / (10**5)
                  }
              } catch(e) {
-                 this.error = "buyback: " + e
+                 this.error = "sell: " + e
                  console.log(e)
                  return
              }
