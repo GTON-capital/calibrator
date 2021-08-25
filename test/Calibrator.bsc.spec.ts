@@ -59,7 +59,7 @@ describe("Calibrator", () => {
       return amountUSDC.div(amountGTON)
   }
 
-  describe("#bsc", async () => {
+  describe.only("#bsc", async () => {
     it("estimates with fees", async () => {
 
       const factoryFactory = await ethers.getContractFactory("PancakeFactory")
@@ -80,10 +80,10 @@ describe("Calibrator", () => {
 
       // hardcode address to expect a pair there after addLiquidityETH
       // let pairAddress = "0x55f9937E4257BCC49d112bF1E87959CA095818eF"
-      const pair = pairFactory.attach(pairAddress) as UniswapV2Pair
+      const pair = pairFactory.attach(pairAddress) as PancakePair
 
-      let liquidityGTON = BigNumber.from("2000000000000000000000")
-      let liquidityWETH = BigNumber.from("8928000000000000000000")
+      let liquidityGTON = BigNumber.from("17661000000000000000000")
+      let liquidityWETH = BigNumber.from("290000000000000000000")
       await gton.approve(router.address, liquidityGTON)
       let block = await wallet.provider.getBlock("latest")
       let timestamp = block.timestamp
@@ -96,29 +96,29 @@ describe("Calibrator", () => {
         timestamp + 3600,
         {value: liquidityWETH}
       ))
-        .to.emit(gton, "Transfer").withArgs(wallet.address, pair.address, "2000000000000000000000")
-        .to.emit(weth, "Transfer").withArgs(router.address, pair.address, "8928000000000000000000")
+        .to.emit(gton, "Transfer").withArgs(wallet.address, pair.address, "17661000000000000000000")
+        .to.emit(weth, "Transfer").withArgs(router.address, pair.address, "290000000000000000000")
         .to.emit(pair, "Transfer").withArgs(ZERO_ADDR, ZERO_ADDR, "1000")
-        .to.emit(pair, "Transfer").withArgs(ZERO_ADDR, wallet.address, "4225636046798162193984")
-        .to.emit(pair, "Sync").withArgs("2000000000000000000000", "8928000000000000000000")
-        .to.emit(pair, "Mint").withArgs(router.address, "2000000000000000000000","8928000000000000000000")
+        .to.emit(pair, "Transfer").withArgs(ZERO_ADDR, wallet.address, "2263115109754693851037")
+        .to.emit(pair, "Sync").withArgs("290000000000000000000","17661000000000000000000")
+        .to.emit(pair, "Mint").withArgs(router.address, "290000000000000000000","17661000000000000000000")
 
       const pairAddress2 = await factory.getPair(weth.address, gton.address)
       // console.log(pairAddress2)
       expect(pairAddress2).to.eq(pairAddress)
 
-      expect(await pair.token0()).to.eq(gton.address)
-      expect(await pair.token1()).to.eq(weth.address)
+      expect(await pair.token1()).to.eq(gton.address)
+      expect(await pair.token0()).to.eq(weth.address)
 
       const calibratorFactory = await ethers.getContractFactory("Calibrator")
       const calibrator = (await calibratorFactory.deploy(
         gton.address,
         router.address,
-        "QUICK"
+        "BSC"
       )) as Calibrator
 
-      // console.log("TOTAL SUPPLY: ", (await pair.totalSupply()).toString())
-      await pair.approve(calibrator.address, "3225636046798162193984")
+      console.log("TOTAL SUPPLY: ", (await pair.totalSupply()).toString())
+      await pair.approve(calibrator.address, "2163115109754693852037")
 
       let reserves = await calibrator.getReserves(pair.address, gton.address, weth.address)
       let reserveGTONBefore = reserves[0].toString()
@@ -128,13 +128,13 @@ describe("Calibrator", () => {
 
       let estimates = await calibrator.estimateNow(
         pair.address,
-        "3225636046798162193984",
+        "2163115109754693852037",
         "5192222000000"
       )
-      let reserveGTONEstimated = estimates[0] //"1999999956053099970307"
-      let reserveTokenEstimated = estimates[1] //"8928000000000000000000"
-      let amountGTONEstimated = estimates[2] //"43946900029693"
-      let liquidityEstimated = estimates[3] //"3225636000302517244662"
+      let reserveGTONEstimated = estimates[0] //"17660999764634500939503"
+      let reserveTokenEstimated = estimates[1] //"290000000000000000000"
+      let amountGTONEstimated = estimates[2] //"235365499060497"
+      let liquidityEstimated = estimates[3] //"2163115094655550648103"
       // console.log(
       //   estimates[0].toString(),
       //   estimates[1].toString(),
@@ -142,15 +142,27 @@ describe("Calibrator", () => {
       //   estimates[3].toString()
       // )
 
-      // console.log("LP FEE BEFORE", (await pair.balanceOf(other.address)).toString())
+      // let tx: ContractTransaction = await calibrator.calibrate(
+      //   pair.address,
+      //   "2163115109754693852037",
+      //   "5192222000000",
+      //   wallet.address
+      // )
+      // let receipt: ContractReceipt = await tx.wait();
+      // console.log(receipt.events);
+      // // sync topic0 is 0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1
+      // // find one with the latest log index
+
+      console.log("LP FEE BEFORE", (await pair.balanceOf(other.address)).toString())
       await expect(calibrator.calibrate(
         pair.address,
-        "3225636046798162193984",
+        "2163115109754693852037",
         "5192222000000",
         wallet.address
       ))
-        .to.emit(pair, "Sync").withArgs("1999999956053099970307","8928000000000000000000")
-      // console.log("LP FEE AFTER", (await pair.balanceOf(other.address)).toString())
+        .to.emit(pair, "Sync").withArgs("290000000000000000000","17660999764693578401868")
+      console.log("LP FEE AFTER", (await pair.balanceOf(other.address)).toString())
+
 
       reserves = await calibrator.getReserves(pair.address, gton.address, weth.address)
       let reserveGTONAfter = reserves[0].toString()
@@ -158,8 +170,8 @@ describe("Calibrator", () => {
       // console.log("gton after", reserveGTONAfter)
       // console.log("token after", reserveTokenAfter)
 
-      expect(reserveGTONEstimated).to.eq("1999999956053099970307")
-      expect(reserveTokenEstimated).to.eq("8928000000000000000000")
+      expect(reserveGTONEstimated).to.eq("17660999764693578401868")
+      expect(reserveTokenEstimated).to.eq("290000000000000000000")
     })
   })
 })

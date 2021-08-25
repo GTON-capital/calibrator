@@ -10,7 +10,7 @@ contract Calibrator is ICalibrator {
     address public owner;
     IERC20 public base;
     IUniswapV2Router01 public router;
-    string dex;
+    string public dex;
 
     struct Pool {
         uint256 reserveBase;
@@ -33,7 +33,10 @@ contract Calibrator is ICalibrator {
         owner = msg.sender;
         base = _base;
         router = _router;
-        require((equal(_dex,"MDEX")) || (equal(_dex,"QUICK")), "dex unknown");
+        require((equal(_dex,"MDEX")) ||
+                (equal(_dex,"QUICK")) ||
+                (equal(_dex,"BSC")),
+                "dex unknown");
         dex = _dex;
     }
 
@@ -445,7 +448,7 @@ contract Calibrator is ICalibrator {
         uint256 reserveBaseBefore,
         uint256 reserveQuoteBefore,
         uint256 amountBaseBuy
-    ) public pure returns (
+    ) public view returns (
         uint256 reserveBaseAfter,
         uint256 reserveQuoteAfter,
         uint256 amountQuoteSell
@@ -465,7 +468,7 @@ contract Calibrator is ICalibrator {
         uint256 reserveBaseBefore,
         uint256 reserveQuoteBefore,
         uint256 amountBaseSell
-    ) public pure returns (
+    ) public view returns (
         uint256 reserveBaseAfter,
         uint256 reserveQuoteAfter,
         uint256 amountQuoteBuy
@@ -539,22 +542,35 @@ contract Calibrator is ICalibrator {
     }
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public pure returns (uint amountOut) {
+    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public view returns (uint amountOut) {
         // require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
         // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
-        uint amountInWithFee = amountIn * 997;
-        uint numerator = amountInWithFee * reserveOut;
-        uint denominator = (reserveIn * 1000) + amountInWithFee;
-        amountOut = numerator / denominator;
+        if (equal(dex, "BSC")) {
+            uint amountInWithFee = amountIn * 9975;
+            uint numerator = amountInWithFee * reserveOut;
+            uint denominator = (reserveIn * 10000) + amountInWithFee;
+            amountOut = numerator / denominator;
+        } else {
+            uint amountInWithFee = amountIn * 997;
+            uint numerator = amountInWithFee * reserveOut;
+            uint denominator = (reserveIn * 1000) + amountInWithFee;
+            amountOut = numerator / denominator;
+        }
     }
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
-    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public pure returns (uint amountIn) {
+    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public view returns (uint amountIn) {
         // require(amountOut > 0, 'UniswapV2Library: INSUFFICIENT_OUTPUT_AMOUNT');
         // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
-        uint numerator = reserveIn * amountOut * 1000;
-        uint denominator = (reserveOut - amountOut) * 997;
-        amountIn = (numerator / denominator) + 1;
+        if (equal(dex, "BSC")) {
+            uint numerator = reserveIn * amountOut * 10000;
+            uint denominator = (reserveOut - amountOut) * 9975;
+            amountIn = (numerator / denominator) + 1;
+        } else {
+            uint numerator = reserveIn * amountOut * 1000;
+            uint denominator = (reserveOut - amountOut) * 997;
+            amountIn = (numerator / denominator) + 1;
+        }
     }
 
     function tokenFromPool(IUniswapV2Pair pool) public view returns (IERC20 token) {
@@ -616,6 +632,19 @@ contract Calibrator is ICalibrator {
                 if (rootK > rootKLast) {
                     uint numerator = totalSupply * (rootK - rootKLast);
                     uint denominator = (rootK * 5) + rootKLast;
+                    uint liquidityFee = numerator / denominator;
+                    if (liquidityFee > 0) {
+                        totalSupply += liquidityFee;
+                    }
+                }
+            }
+        } else if (equal(dex, "BSC")) {
+            if (kLast != 0) {
+                uint rootK = sqrt(reserve0 * reserve1);
+                uint rootKLast = sqrt(kLast);
+                if (rootK > rootKLast) {
+                    uint numerator = totalSupply * (rootK - rootKLast);
+                    uint denominator = (rootK * 17) + rootKLast;
                     uint liquidityFee = numerator / denominator;
                     if (liquidityFee > 0) {
                         totalSupply += liquidityFee;
