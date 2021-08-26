@@ -35,7 +35,9 @@ contract Calibrator is ICalibrator {
         router = _router;
         require((equal(_dex,"MDEX")) ||
                 (equal(_dex,"QUICK")) ||
-                (equal(_dex,"BSC")),
+                (equal(_dex,"SPIRIT")) ||
+                (equal(_dex,"SPOOKY")) ||
+                (equal(_dex,"CAKE")),
                 "dex unknown");
         dex = _dex;
     }
@@ -515,6 +517,37 @@ contract Calibrator is ICalibrator {
     }
 
     // **** LIBRARY FUNCTIONS ****
+    function sqrt(uint256 a) internal pure returns (uint256 b) {
+        if (a > 3) {
+            b = a;
+            uint256 x = a / 2 + 1;
+            while (x < b) {
+                b = x;
+                x = (a / x + x) / 2;
+            }
+        } else if (a != 0) {
+            b = 1;
+        }
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a <= b ? a : b;
+    }
+
+    function equal(string memory a, string memory b)
+        public
+        pure
+        returns (bool)
+    {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+
+    function tokenFromPool(IUniswapV2Pair pool) public view returns (IERC20 token) {
+        address token0 = pool.token0();
+        address token1 = pool.token1();
+        token = token0 == address(base) ? IERC20(token1) : IERC20(token0);
+    }
+
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
@@ -545,10 +578,15 @@ contract Calibrator is ICalibrator {
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public view returns (uint amountOut) {
         // require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
         // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
-        if (equal(dex, "BSC")) {
+        if (equal(dex, "CAKE")) {
             uint amountInWithFee = amountIn * 9975;
             uint numerator = amountInWithFee * reserveOut;
             uint denominator = (reserveIn * 10000) + amountInWithFee;
+            amountOut = numerator / denominator;
+        } else if (equal(dex, "SPOOKY")) {
+            uint amountInWithFee = amountIn * 998;
+            uint numerator = amountInWithFee * reserveOut;
+            uint denominator = (reserveIn * 1000) + amountInWithFee;
             amountOut = numerator / denominator;
         } else {
             uint amountInWithFee = amountIn * 997;
@@ -562,46 +600,19 @@ contract Calibrator is ICalibrator {
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public view returns (uint amountIn) {
         // require(amountOut > 0, 'UniswapV2Library: INSUFFICIENT_OUTPUT_AMOUNT');
         // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
-        if (equal(dex, "BSC")) {
+        if (equal(dex, "CAKE")) {
             uint numerator = reserveIn * amountOut * 10000;
             uint denominator = (reserveOut - amountOut) * 9975;
+            amountIn = (numerator / denominator) + 1;
+        } else if (equal(dex, "SPOOKY")) {
+            uint numerator = reserveIn * amountOut * 1000;
+            uint denominator = (reserveOut - amountOut) * 998;
             amountIn = (numerator / denominator) + 1;
         } else {
             uint numerator = reserveIn * amountOut * 1000;
             uint denominator = (reserveOut - amountOut) * 997;
             amountIn = (numerator / denominator) + 1;
         }
-    }
-
-    function tokenFromPool(IUniswapV2Pair pool) public view returns (IERC20 token) {
-        address token0 = pool.token0();
-        address token1 = pool.token1();
-        token = token0 == address(base) ? IERC20(token1) : IERC20(token0);
-    }
-
-    function sqrt(uint256 a) internal pure returns (uint256 b) {
-        if (a > 3) {
-            b = a;
-            uint256 x = a / 2 + 1;
-            while (x < b) {
-                b = x;
-                x = (a / x + x) / 2;
-            }
-        } else if (a != 0) {
-            b = 1;
-        }
-    }
-
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a <= b ? a : b;
-    }
-
-    function equal(string memory a, string memory b)
-        public
-        pure
-        returns (bool)
-    {
-        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 
     function mintFee(
@@ -638,13 +649,39 @@ contract Calibrator is ICalibrator {
                     }
                 }
             }
-        } else if (equal(dex, "BSC")) {
+        } else if (equal(dex, "CAKE")) {
             if (kLast != 0) {
                 uint rootK = sqrt(reserve0 * reserve1);
                 uint rootKLast = sqrt(kLast);
                 if (rootK > rootKLast) {
                     uint numerator = totalSupply * (rootK - rootKLast);
                     uint denominator = (rootK * 17) + rootKLast;
+                    uint liquidityFee = numerator / denominator;
+                    if (liquidityFee > 0) {
+                        totalSupply += liquidityFee;
+                    }
+                }
+            }
+        } else if (equal(dex, "SPOOKY")) {
+            if (kLast != 0) {
+                uint rootK = sqrt(reserve0 * reserve1);
+                uint rootKLast = sqrt(kLast);
+                if (rootK > rootKLast) {
+                    uint numerator = totalSupply * (rootK - rootKLast);
+                    uint denominator = (rootK * 3) + rootKLast;
+                    uint liquidityFee = numerator / denominator;
+                    if (liquidityFee > 0) {
+                        totalSupply += liquidityFee;
+                    }
+                }
+            }
+        } else if (equal(dex, "SPIRIT")) {
+            if (kLast != 0) {
+                uint rootK = sqrt(reserve0 * reserve1);
+                uint rootKLast = sqrt(kLast);
+                if (rootK > rootKLast) {
+                    uint numerator = totalSupply * (rootK - rootKLast);
+                    uint denominator = (rootK * 5) + rootKLast;
                     uint liquidityFee = numerator / denominator;
                     if (liquidityFee > 0) {
                         totalSupply += liquidityFee;

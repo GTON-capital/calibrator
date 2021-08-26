@@ -3,9 +3,9 @@ import { BigNumber } from "ethers"
 
 import { TestERC20 } from "../../typechain/TestERC20"
 import { WrappedNative } from "../../typechain/WrappedNative"
-import { UniswapV2Pair } from "../../typechain/UniswapV2Pair"
-import { UniswapV2Factory } from "../../typechain/UniswapV2Factory"
-import { UniswapV2Router01 } from "../../typechain/UniswapV2Router01"
+import { QuickPair } from "../../typechain/QuickPair"
+import { QuickFactory } from "../../typechain/QuickFactory"
+import { QuickRouter01 } from "../../typechain/QuickRouter01"
 import { Calibrator } from "../../typechain/Calibrator"
 
 import { MdexPair } from "../../typechain/MdexPair"
@@ -48,20 +48,18 @@ export const tokensFixture: Fixture<TokensFixture> =
 
   const wethFactory = await ethers.getContractFactory("WrappedNative")
   let weth = await wethFactory.deploy() as WrappedNative
-  weth = await wethFactory.deploy() as WrappedNative
-  weth = await wethFactory.deploy() as WrappedNative
-  weth = await wethFactory.deploy() as WrappedNative
-  weth = await wethFactory.deploy() as WrappedNative
-  weth = await wethFactory.deploy() as WrappedNative
+  while (weth.address.toLowerCase() > token0.address.toLowerCase()) {
+    weth = await wethFactory.deploy() as WrappedNative
+  }
 
   return { token0, token1, token2, weth }
 }
 
 interface UniswapFixture extends TokensFixture {
-  uniswapV2Factory: UniswapV2Factory
-  uniswapV2Router01: UniswapV2Router01
-  uniswapV2PairGTON_WETH: UniswapV2Pair
-  uniswapV2PairGTON_USDC: UniswapV2Pair
+  uniswapV2Factory: QuickFactory
+  uniswapV2Router01: QuickRouter01
+  uniswapV2PairGTON_WETH: QuickPair
+  uniswapV2PairGTON_USDC: QuickPair
   mdexFactory: MdexFactory
   mdexRouter: MdexRouter
   mdexPairGTON_WETH: MdexPair
@@ -75,32 +73,32 @@ const uniswapFixture: Fixture<UniswapFixture> =
   const { token0: gton, token1: usdt, token2: usdc, weth: weth } = await tokensFixture([wallet, other], provider)
 
   const uniswapV2FactoryFactory = await ethers.getContractFactory(
-    "UniswapV2Factory"
+    "QuickFactory"
   )
   const uniswapV2Factory = await uniswapV2FactoryFactory.deploy(
     wallet.address
-  ) as UniswapV2Factory
+  ) as QuickFactory
 
   await uniswapV2Factory.setFeeTo(other.address)
 
   const uniswapV2Router01Factory = await ethers.getContractFactory(
-    "UniswapV2Router01"
+    "QuickRouter01"
   )
   const uniswapV2Router01 = await uniswapV2Router01Factory.deploy(
     uniswapV2Factory.address,
     weth.address
-  ) as UniswapV2Router01
+  ) as QuickRouter01
 
   await uniswapV2Factory.createPair(weth.address, gton.address)
 
   const uniswapV2PairFactory = await ethers.getContractFactory(
-    "UniswapV2Pair"
+    "QuickPair"
   )
   // log pairV2 bytecode for init code hash in the router
   // let bytecode = uniswapV2PairFactory.bytecode
   // console.log(ethers.utils.solidityKeccak256(["bytes"],[bytecode]))
   let pairAddressGTON_WETH = await uniswapV2Factory.getPair(weth.address, gton.address)
-  const uniswapV2PairGTON_WETH = uniswapV2PairFactory.attach(pairAddressGTON_WETH) as UniswapV2Pair
+  const uniswapV2PairGTON_WETH = uniswapV2PairFactory.attach(pairAddressGTON_WETH) as QuickPair
 
   let liquidityGTON
   let block
@@ -131,7 +129,7 @@ const uniswapFixture: Fixture<UniswapFixture> =
   // let bytecode = uniswapV2PairFactory.bytecode
   // console.log(ethers.utils.solidityKeccak256(["bytes"],[bytecode]))
   let pairAddressGTON_USDC = await uniswapV2Factory.getPair(usdc.address, gton.address)
-  const uniswapV2PairGTON_USDC = uniswapV2PairFactory.attach(pairAddressGTON_USDC) as UniswapV2Pair
+  const uniswapV2PairGTON_USDC = uniswapV2PairFactory.attach(pairAddressGTON_USDC) as QuickPair
 
   liquidityGTON = expandTo18Decimals(10)
   let liquidityUSDC = expandTo18Decimals(50)

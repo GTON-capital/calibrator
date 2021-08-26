@@ -2,9 +2,6 @@ import { ethers, waffle } from "hardhat"
 import { BigNumber, ContractReceipt, ContractTransaction } from "ethers"
 import { TestERC20 } from "../typechain/TestERC20"
 import { WrappedNative } from "../typechain/WrappedNative"
-import { UniswapV2Pair } from "../typechain/UniswapV2Pair"
-import { UniswapV2Factory } from "../typechain/UniswapV2Factory"
-import { UniswapV2Router01 } from "../typechain/UniswapV2Router01"
 import { MdexPair } from "../typechain/MdexPair"
 import { MdexFactory } from "../typechain/MdexFactory"
 import { MdexRouter } from "../typechain/MdexRouter"
@@ -18,7 +15,7 @@ import {
   ZERO_ADDR
 } from "./shared/utilities"
 
-describe("Calibrator", () => {
+describe("Mdex", () => {
   const [wallet, other] = waffle.provider.getWallets()
 
   let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
@@ -45,8 +42,8 @@ describe("Calibrator", () => {
     startingBalance = await wallet.provider.getBalance(wallet.address)
   })
 
-  describe("#mdex", async () => {
-    it("estimates with fees", async () => {
+  describe("#calibrate", async () => {
+    it("matches estimates", async () => {
 
       const factoryFactory = await ethers.getContractFactory("MdexFactory")
       const factory = await factoryFactory.deploy(wallet.address) as MdexFactory
@@ -58,10 +55,13 @@ describe("Calibrator", () => {
       const routerFactory = await ethers.getContractFactory("MdexRouter")
       const router = await routerFactory.deploy(factory.address,weth.address) as MdexRouter
 
-      // hardcode address to expect a pair there
-      let pairAddress = "0x9C671a7f7a0B75dd13A040353A18c9700914bE04"
+      await factory.createPair(gton.address, weth.address)
+      const pairAddress = await factory.getPair(weth.address, gton.address)
+
       const pairFactory = await ethers.getContractFactory("MdexPair")
       const pair = pairFactory.attach(pairAddress) as MdexPair
+      // let bytecode = pairFactory.bytecode
+      // console.log(ethers.utils.solidityKeccak256(["bytes"],[bytecode]))
 
       let liquidityGTON = BigNumber.from("800000000000000000")
       let liquidityWETH = BigNumber.from("400000000000000000")
@@ -77,7 +77,6 @@ describe("Calibrator", () => {
         timestamp + 3600,
         {value: liquidityWETH}
       ))
-        .to.emit(factory, "PairCreated").withArgs(weth.address, gton.address, pairAddress, 1)
         .to.emit(gton, "Transfer").withArgs(wallet.address, pair.address, "800000000000000000")
         .to.emit(weth, "Transfer").withArgs(router.address, pair.address, "400000000000000000")
         .to.emit(pair, "Transfer").withArgs(ZERO_ADDR, ZERO_ADDR, "1000")

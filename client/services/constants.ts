@@ -30,6 +30,10 @@ export interface Constants {
     cake_pool_GTON_BUSD: string
     cake_router: string
     cake_factory: string
+    spooky_router: string
+    spooky_factory: string
+    spirit_router: string
+    spirit_factory: string
 }
 
 export const C: Constants = {
@@ -61,7 +65,11 @@ export const C: Constants = {
     cake_pool_GTON_WBNB: '0xA216571b69dd69600F50992f7c23b07B1980CfD8',
     cake_pool_GTON_BUSD: '0xbe2c760aE00CbE6A5857cda719E74715edC22279',
     cake_router: '0x10ED43C718714eb63d5aA57B78B54704E256024E',
-    cake_factory: '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
+    cake_factory: '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73',
+    spooky_factory: '0x152ee697f2e276fa89e96742e9bb9ab1f2e61be3',
+    spooky_router: '0xF491e7B69E4244ad4002BC14e878a34207E38c29',
+    spirit_factory: '0xef45d134b73241eda7703fa787148d9c9f4950b0'
+    spirit_router: '0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52'
 }
 
 export const tokens = [

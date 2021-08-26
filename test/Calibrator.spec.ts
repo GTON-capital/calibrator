@@ -2,9 +2,9 @@ import { ethers, waffle } from "hardhat"
 import { BigNumber } from "ethers"
 import { TestERC20 } from "../typechain/TestERC20"
 import { WrappedNative } from "../typechain/WrappedNative"
-import { UniswapV2Pair } from "../typechain/UniswapV2Pair"
-import { UniswapV2Factory } from "../typechain/UniswapV2Factory"
-import { UniswapV2Router01 } from "../typechain/UniswapV2Router01"
+import { QuickPair } from "../typechain/QuickPair"
+import { QuickFactory } from "../typechain/QuickFactory"
+import { QuickRouter01 } from "../typechain/QuickRouter01"
 import { MdexPair } from "../typechain/MdexPair"
 import { MdexFactory } from "../typechain/MdexFactory"
 import { MdexRouter } from "../typechain/MdexRouter"
@@ -28,10 +28,10 @@ describe("Calibrator", () => {
   let usdc: TestERC20
   let usdt: TestERC20
   let weth: WrappedNative
-  let uniswapV2Factory: UniswapV2Factory
-  let uniswapV2Router01: UniswapV2Router01
-  let uniswapV2PairGTON_WETH: UniswapV2Pair
-  let uniswapV2PairGTON_USDC: UniswapV2Pair
+  let uniswapV2Factory: QuickFactory
+  let uniswapV2Router01: QuickRouter01
+  let uniswapV2PairGTON_WETH: QuickPair
+  let uniswapV2PairGTON_USDC: QuickPair
   let mdexFactory: MdexFactory
   let mdexRouter: MdexRouter
   let mdexPairGTON_WETH: MdexPair
@@ -144,15 +144,18 @@ describe("Calibrator", () => {
     it("mdex estimates are equal to results", async () => {
         let liquidity = BigNumber.from("15013400000000")
         let buyback = BigNumber.from("3580600000000")
-        let result = await calibratorMdex.estimateNow(mdexPairGTON_WETH.address, liquidity, buyback)
+        let result = await calibratorMdex.estimateNow(
+          mdexPairGTON_WETH.address,
+          liquidity,
+          buyback)
         let reserveGton = result[0]
         let reserveToken = result[1]
 
         let reserves = await mdexPairGTON_WETH.getReserves()
-        let reserveGton1 = reserves[0]
-        let reserveToken1 = reserves[1]
+        let reserveGton1 = reserves[1]
+        let reserveToken1 = reserves[0]
 
-        await mdexPairGTON_WETH.approve(calibratorMdex.address, "99999999999999999")
+        await mdexPairGTON_WETH.approve(calibratorMdex.address, liquidity)
         await calibratorMdex.calibrate(
           mdexPairGTON_WETH.address,
           liquidity,
@@ -161,8 +164,8 @@ describe("Calibrator", () => {
         )
 
         reserves = await mdexPairGTON_WETH.getReserves()
-        let reserveGton2 = reserves[0]
-        let reserveToken2 = reserves[1]
+        let reserveGton2 = reserves[1]
+        let reserveToken2 = reserves[0]
 
         expect(reserveGton).to.eq(reserveGton2)
         expect(reserveToken).to.eq(reserveToken2)
