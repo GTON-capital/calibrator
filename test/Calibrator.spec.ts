@@ -267,7 +267,7 @@ describe("Calibrator", () => {
       let reserves = await uniswapV2PairGTON_USDC.getReserves()
       let reserveGton = reserves[0]
       let reserveToken = reserves[1]
-      console.log(reserveGton.toString(), reserveToken.toString())
+      // console.log(reserveGton.toString(), reserveToken.toString())
       let results = await calibrator.pickBuy(
         reserveGton,
         reserveToken,
@@ -275,12 +275,12 @@ describe("Calibrator", () => {
         start,
         end
       )
-      console.log(
-        results[0].toString(),
-        results[1].toString(),
-        results[2].toString()
-      )
-      expect(results[2]).to.eq("3632324218749999999")
+      // console.log(
+      //   results[0].toString(),
+      //   results[1].toString(),
+      //   results[2].toString()
+      // )
+      expect(results[2]).to.eq("3632812499999999999")
     })
   })
 
@@ -292,7 +292,7 @@ describe("Calibrator", () => {
       let reserves = await uniswapV2PairGTON_USDC.getReserves()
       let reserveGton = reserves[0]
       let reserveToken = reserves[1]
-      console.log(reserveGton.toString(), reserveToken.toString())
+      // console.log(reserveGton.toString(), reserveToken.toString())
       let results = await calibrator.pickSell(
         reserveGton,
         reserveToken,
@@ -300,12 +300,12 @@ describe("Calibrator", () => {
         start,
         end
       )
-      console.log(
-        results[0].toString(),
-        results[1].toString(),
-        results[2].toString()
-      )
-      // expect(result[2]).to.eq("3632324218749999999")
+      // console.log(
+      //   results[0].toString(),
+      //   results[1].toString(),
+      //   results[2].toString()
+      // )
+      expect(results[2]).to.eq("820312499999999999")
     })
   })
 })

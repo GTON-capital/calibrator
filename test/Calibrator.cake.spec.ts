@@ -10,10 +10,7 @@ import { RelayLock } from "../typechain/RelayLock"
 import { Relay } from "../typechain/Relay"
 import { tokensFixture } from "./shared/fixtures"
 import { expect } from "./shared/expect"
-import {
-  expandTo18Decimals,
-  ZERO_ADDR
-} from "./shared/utilities"
+import { expandTo18Decimals, ZERO_ADDR } from "./shared/utilities"
 
 describe("Pancake", () => {
   const [wallet, other] = waffle.provider.getWallets()
@@ -34,38 +31,43 @@ describe("Pancake", () => {
   let startingBalance: BigNumber
 
   beforeEach("deploy test contracts", async () => {
-    ;({ token0: gton,
-        token1: usdt,
-        token2: usdc,
-        weth: weth
-      } = await loadFixture(tokensFixture))
+    ;({
+      token0: gton,
+      token1: usdt,
+      token2: usdc,
+      weth: weth
+    } = await loadFixture(tokensFixture))
     startingBalance = await wallet.provider.getBalance(wallet.address)
   })
 
   async function nextAddress() {
-      const wethFactory = await ethers.getContractFactory("WrappedNative")
-      await wethFactory.deploy()
+    const wethFactory = await ethers.getContractFactory("WrappedNative")
+    await wethFactory.deploy()
   }
 
   async function getPrice(): Promise<BigNumber> {
-      let amountsIn = BigNumber.from("10000")
-      let [amountGTON, amountUSDC] = await router.getAmountsOut(
-          amountsIn,
-          [gton.address, usdc.address]
-      )
-      return amountUSDC.div(amountGTON)
+    let amountsIn = BigNumber.from("10000")
+    let [amountGTON, amountUSDC] = await router.getAmountsOut(amountsIn, [
+      gton.address,
+      usdc.address
+    ])
+    return amountUSDC.div(amountGTON)
   }
 
   describe("#calibrate", async () => {
     it("matches estimates", async () => {
-
       const factoryFactory = await ethers.getContractFactory("PancakeFactory")
-      const factory = await factoryFactory.deploy(wallet.address) as PancakeFactory
+      const factory = (await factoryFactory.deploy(
+        wallet.address
+      )) as PancakeFactory
 
       await factory.setFeeTo(other.address)
 
       const routerFactory = await ethers.getContractFactory("PancakeRouter")
-      const router = await routerFactory.deploy(factory.address,weth.address) as PancakeRouter
+      const router = (await routerFactory.deploy(
+        factory.address,
+        weth.address
+      )) as PancakeRouter
 
       const pairFactory = await ethers.getContractFactory("PancakePair")
       // let bytecode = pairFactory.bytecode
@@ -84,21 +86,33 @@ describe("Pancake", () => {
       await gton.approve(router.address, liquidityGTON)
       let block = await wallet.provider.getBlock("latest")
       let timestamp = block.timestamp
-      await expect(router.addLiquidityETH(
-        gton.address,
-        liquidityGTON,
-        liquidityGTON,
-        liquidityWETH,
-        wallet.address,
-        timestamp + 3600,
-        {value: liquidityWETH}
-      ))
-        .to.emit(gton, "Transfer").withArgs(wallet.address, pair.address, "17661000000000000000000")
-        .to.emit(weth, "Transfer").withArgs(router.address, pair.address, "290000000000000000000")
-        .to.emit(pair, "Transfer").withArgs(ZERO_ADDR, ZERO_ADDR, "1000")
-        .to.emit(pair, "Transfer").withArgs(ZERO_ADDR, wallet.address, "2263115109754693851037")
-        .to.emit(pair, "Sync").withArgs("290000000000000000000","17661000000000000000000")
-        .to.emit(pair, "Mint").withArgs(router.address, "290000000000000000000","17661000000000000000000")
+      await expect(
+        router.addLiquidityETH(
+          gton.address,
+          liquidityGTON,
+          liquidityGTON,
+          liquidityWETH,
+          wallet.address,
+          timestamp + 3600,
+          { value: liquidityWETH }
+        )
+      )
+        .to.emit(gton, "Transfer")
+        .withArgs(wallet.address, pair.address, "17661000000000000000000")
+        .to.emit(weth, "Transfer")
+        .withArgs(router.address, pair.address, "290000000000000000000")
+        .to.emit(pair, "Transfer")
+        .withArgs(ZERO_ADDR, ZERO_ADDR, "1000")
+        .to.emit(pair, "Transfer")
+        .withArgs(ZERO_ADDR, wallet.address, "2263115109754693851037")
+        .to.emit(pair, "Sync")
+        .withArgs("290000000000000000000", "17661000000000000000000")
+        .to.emit(pair, "Mint")
+        .withArgs(
+          router.address,
+          "290000000000000000000",
+          "17661000000000000000000"
+        )
 
       const pairAddress2 = await factory.getPair(weth.address, gton.address)
       // console.log(pairAddress2)
@@ -117,7 +131,11 @@ describe("Pancake", () => {
       // console.log("TOTAL SUPPLY: ", (await pair.totalSupply()).toString())
       await pair.approve(calibrator.address, "2163115109754693852037")
 
-      let reserves = await calibrator.getReserves(pair.address, gton.address, weth.address)
+      let reserves = await calibrator.getReserves(
+        pair.address,
+        gton.address,
+        weth.address
+      )
       let reserveGTONBefore = reserves[0].toString()
       let reserveTokenBefore = reserves[1].toString()
       // console.log("gton before", reserveGTONBefore)
@@ -151,18 +169,23 @@ describe("Pancake", () => {
       // // find one with the latest log index
 
       // console.log("LP FEE BEFORE", (await pair.balanceOf(other.address)).toString())
-      await expect(calibrator.calibrateSafe(
-        pair.address,
-        "2163115109754693852037",
-        "5192222000000",
-        wallet.address,
-        608999
-      ))
-        .to.emit(pair, "Sync").withArgs("290000000000000000000","17660999764693578401868")
+      await expect(
+        calibrator.calibrate(
+          pair.address,
+          "2163115109754693852037",
+          "5192222000000",
+          wallet.address
+        )
+      )
+        .to.emit(pair, "Sync")
+        .withArgs("290000000000000000000", "17660999764693578401868")
       // console.log("LP FEE AFTER", (await pair.balanceOf(other.address)).toString())
 
-
-      reserves = await calibrator.getReserves(pair.address, gton.address, weth.address)
+      reserves = await calibrator.getReserves(
+        pair.address,
+        gton.address,
+        weth.address
+      )
       let reserveGTONAfter = reserves[0].toString()
       let reserveTokenAfter = reserves[1].toString()
       // console.log("gton after", reserveGTONAfter)

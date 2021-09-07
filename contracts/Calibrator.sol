@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "./interfaces/ICalibrator.sol";
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 /// @title Calibrator
 contract Calibrator is ICalibrator {
@@ -526,13 +526,13 @@ contract Calibrator is ICalibrator {
     {
         uint256 ds = 100;
         if ((reserveQuoteBefore * ds) / reserveBaseBefore == price) {
-            console.log(
-                // "--",
-                reserveBaseBefore,
-                reserveQuoteBefore,
-                (reserveQuoteBefore * ds) / reserveBaseBefore,
-                0
-            );
+            // console.log(
+            //     // "--",
+            //     reserveBaseBefore,
+            //     reserveQuoteBefore,
+            //     (reserveQuoteBefore * ds) / reserveBaseBefore,
+            //     0
+            // );
             return (reserveBaseBefore, reserveQuoteBefore, 0);
         }
         uint256 amountBaseBuy = (start + end) / 2;
@@ -545,23 +545,23 @@ contract Calibrator is ICalibrator {
             uint256 amountQuoteSell
         ) = estimateBuy(reserveBaseBefore, reserveQuoteBefore, amountBaseBuy);
         if ((reserveQuoteAfter * ds) / reserveBaseAfter == price) {
-            console.log(
-                // "eq",
-                reserveBaseAfter,
-                reserveQuoteAfter,
-                (reserveQuoteAfter * ds) / reserveBaseAfter,
-                amountBaseBuy
-            );
+            // console.log(
+            //     // "eq",
+            //     reserveBaseAfter,
+            //     reserveQuoteAfter,
+            //     (reserveQuoteAfter * ds) / reserveBaseAfter,
+            //     amountBaseBuy
+            // );
             return (reserveBaseAfter, reserveQuoteAfter, amountBaseBuy);
         }
         if ((reserveQuoteAfter * ds) / reserveBaseAfter < price) {
-            console.log(
-                // "lt",
-                reserveBaseAfter,
-                reserveQuoteAfter,
-                (reserveQuoteAfter * ds) / reserveBaseAfter,
-                amountBaseBuy
-            );
+            // console.log(
+            //     // "lt",
+            //     reserveBaseAfter,
+            //     reserveQuoteAfter,
+            //     (reserveQuoteAfter * ds) / reserveBaseAfter,
+            //     amountBaseBuy
+            // );
             return
                 pickBuy(
                     reserveBaseBefore,
@@ -572,13 +572,13 @@ contract Calibrator is ICalibrator {
                 );
         }
         if ((reserveQuoteAfter * ds) / reserveBaseAfter > price) {
-            console.log(
-                // "gt",
-                reserveBaseAfter,
-                reserveQuoteAfter,
-                (reserveQuoteAfter * ds) / reserveBaseAfter,
-                amountBaseBuy
-            );
+            // console.log(
+            //     // "gt",
+            //     reserveBaseAfter,
+            //     reserveQuoteAfter,
+            //     (reserveQuoteAfter * ds) / reserveBaseAfter,
+            //     amountBaseBuy
+            // );
             return
                 pickBuy(
                     reserveBaseBefore,
@@ -607,13 +607,13 @@ contract Calibrator is ICalibrator {
     {
         uint256 ds = 100;
         if ((reserveQuoteBefore * ds) / reserveBaseBefore == price) {
-            console.log(
-                // "--",
-                reserveBaseBefore,
-                reserveQuoteBefore,
-                (reserveQuoteBefore * ds) / reserveBaseBefore,
-                0
-            );
+            // console.log(
+            //     // "--",
+            //     reserveBaseBefore,
+            //     reserveQuoteBefore,
+            //     (reserveQuoteBefore * ds) / reserveBaseBefore,
+            //     0
+            // );
             return (reserveBaseBefore, reserveQuoteBefore, 0);
         }
         uint256 amountBaseSell = (start + end) / 2;
@@ -626,23 +626,23 @@ contract Calibrator is ICalibrator {
             uint256 amountQuoteSell
         ) = estimateSell(reserveBaseBefore, reserveQuoteBefore, amountBaseSell);
         if ((reserveQuoteAfter * ds) / reserveBaseAfter == price) {
-            console.log(
-                // "eq",
-                reserveBaseAfter,
-                reserveQuoteAfter,
-                (reserveQuoteAfter * ds) / reserveBaseAfter,
-                amountBaseSell
-            );
+            // console.log(
+            //     // "eq",
+            //     reserveBaseAfter,
+            //     reserveQuoteAfter,
+            //     (reserveQuoteAfter * ds) / reserveBaseAfter,
+            //     amountBaseSell
+            // );
             return (reserveBaseAfter, reserveQuoteAfter, amountBaseSell);
         }
         if ((reserveQuoteAfter * ds) / reserveBaseAfter > price) {
-            console.log(
-                // "lt",
-                reserveBaseAfter,
-                reserveQuoteAfter,
-                (reserveQuoteAfter * ds) / reserveBaseAfter,
-                amountBaseSell
-            );
+            // console.log(
+            //     // "lt",
+            //     reserveBaseAfter,
+            //     reserveQuoteAfter,
+            //     (reserveQuoteAfter * ds) / reserveBaseAfter,
+            //     amountBaseSell
+            // );
             return
                 pickSell(
                     reserveBaseBefore,
@@ -653,13 +653,13 @@ contract Calibrator is ICalibrator {
                 );
         }
         if ((reserveQuoteAfter * ds) / reserveBaseAfter < price) {
-            console.log(
-                // "gt",
-                reserveBaseAfter,
-                reserveQuoteAfter,
-                (reserveQuoteAfter * ds) / reserveBaseAfter,
-                amountBaseSell
-            );
+            // console.log(
+            //     // "gt",
+            //     reserveBaseAfter,
+            //     reserveQuoteAfter,
+            //     (reserveQuoteAfter * ds) / reserveBaseAfter,
+            //     amountBaseSell
+            // );
             return
                 pickSell(
                     reserveBaseBefore,
