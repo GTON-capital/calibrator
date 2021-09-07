@@ -33,12 +33,18 @@ contract Calibrator is ICalibrator {
         owner = msg.sender;
         base = _base;
         router = _router;
-        require((equal(_dex,"MDEX")) ||
-                (equal(_dex,"QUICK")) ||
-                (equal(_dex,"SPIRIT")) ||
-                (equal(_dex,"SPOOKY")) ||
-                (equal(_dex,"CAKE")),
-                "dex unknown");
+        require(
+            (equal(_dex, "MDEX")) ||
+                (equal(_dex, "QUICK")) ||
+                (equal(_dex, "SPIRIT")) ||
+                (equal(_dex, "SPOOKY")) ||
+                (equal(_dex, "SUSHI")) ||
+                (equal(_dex, "PANGOLIN")) ||
+                (equal(_dex, "HONEY")) ||
+                (equal(_dex, "SUSHI")) ||
+                (equal(_dex, "CAKE")),
+            "dex unknown"
+        );
         dex = _dex;
     }
 
@@ -79,6 +85,30 @@ contract Calibrator is ICalibrator {
         calibrate(pool2, liquidity2, amountBaseBuy2, to);
     }
 
+    function calibrateSafe(
+        IUniswapV2Pair pool,
+        uint256 liquidity,
+        uint256 amountBuy,
+        address to,
+        uint256 price // price * 10000; 60.12 = 612000; 0.652 = 6520; 0.0632 = 632
+    ) public {
+        // remove `liquidity`
+        (uint256 reserveBase, uint256 reserveQuote, , ) = estimateNow(
+            pool,
+            liquidity,
+            amountBuy
+        );
+        require((reserveBase * 10000) / reserveQuote < price, "C1");
+        IERC20 token = tokenFromPool(pool);
+        remove(pool, token, liquidity);
+        // buy base for `amountBuy`
+        buy(pool, token, amountBuy);
+        // add liquidity for all quote token and have some base left
+        add(pool, token);
+        // send base and lp to `to`
+        retrieve(pool, to);
+    }
+
     function calibrate(
         IUniswapV2Pair pool,
         uint256 liquidity,
@@ -111,22 +141,37 @@ contract Calibrator is ICalibrator {
         retrieve(pool, to);
     }
 
-    function remove(IUniswapV2Pair pool, IERC20 token, uint256 liquidityRemove) public {
+    function remove(
+        IUniswapV2Pair pool,
+        IERC20 token,
+        uint256 liquidityRemove
+    ) public {
         // transfer `liquidity` from msg.sender
         pool.transferFrom(msg.sender, address(this), liquidityRemove);
         // log(pool, "=========== before remove ===========");
-        uint liquidity = pool.balanceOf(address(this));
-        uint totalSupply = pool.totalSupply();
-        uint kLast = pool.kLast();
-        (uint reserveBase, uint reserveQuote) = getReserves(pool, address(base), address(token));
-        (,,,,uint amountBaseAfter, uint amountQuoteAfter) = estimateRemove(
-            reserveBase,
-            reserveQuote,
-            totalSupply,
-            kLast,
-            liquidity
+        uint256 liquidity = pool.balanceOf(address(this));
+        uint256 totalSupply = pool.totalSupply();
+        uint256 kLast = pool.kLast();
+        (uint256 reserveBase, uint256 reserveQuote) = getReserves(
+            pool,
+            address(base),
+            address(token)
         );
-        uint deadline = block.timestamp+86400;
+        (
+            ,
+            ,
+            ,
+            ,
+            uint256 amountBaseAfter,
+            uint256 amountQuoteAfter
+        ) = estimateRemove(
+                reserveBase,
+                reserveQuote,
+                totalSupply,
+                kLast,
+                liquidity
+            );
+        uint256 deadline = block.timestamp + 86400;
         // console.log("remove liquidity", amount0, amount1, liquidity);
         pool.approve(address(router), liquidity);
         router.removeLiquidity(
@@ -141,15 +186,19 @@ contract Calibrator is ICalibrator {
         // log(pool, "===========  after remove ===========");
     }
 
-    function buy(IUniswapV2Pair pool, IERC20 token, uint256 amountBuy) public {
+    function buy(
+        IUniswapV2Pair pool,
+        IERC20 token,
+        uint256 amountBuy
+    ) public {
         // log(pool, "===========   before buy  ===========");
         base.approve(address(router), base.balanceOf(address(this)));
         token.approve(address(router), token.balanceOf(address(this)));
         address[] memory pathToBase = new address[](2);
         pathToBase[0] = address(token);
         pathToBase[1] = address(base);
-        uint deadline = block.timestamp+86400;
-        uint[] memory amounts = router.getAmountsIn(amountBuy, pathToBase);
+        uint256 deadline = block.timestamp + 86400;
+        uint256[] memory amounts = router.getAmountsIn(amountBuy, pathToBase);
         // console.log("swap base for token", amountBuy, amounts[0]);
         router.swapTokensForExactTokens(
             amountBuy,
@@ -163,15 +212,23 @@ contract Calibrator is ICalibrator {
 
     function add(IUniswapV2Pair pool, IERC20 token) public {
         // log(pool, "===========   before add  ===========");
-        uint amountQuoteAdd = token.balanceOf(address(this));
+        uint256 amountQuoteAdd = token.balanceOf(address(this));
         address[] memory pathToBase = new address[](2);
         pathToBase[0] = address(token);
         pathToBase[1] = address(base);
-        uint deadline = block.timestamp+86400;
-        (uint reserveBase, uint reserveQuote) = getReserves(pool, address(base), address(token));
-        uint amountBaseAdd = quote(amountQuoteAdd, reserveQuote, reserveBase);
+        uint256 deadline = block.timestamp + 86400;
+        (uint256 reserveBase, uint256 reserveQuote) = getReserves(
+            pool,
+            address(base),
+            address(token)
+        );
+        uint256 amountBaseAdd = quote(
+            amountQuoteAdd,
+            reserveQuote,
+            reserveBase
+        );
         // console.log("add liquidity", amountBaseAdd, amountQuoteAdd);
-        (uint amountA, uint amountB, uint liq) = router.addLiquidity(
+        (uint256 amountA, uint256 amountB, uint256 liq) = router.addLiquidity(
             address(token),
             address(base),
             amountQuoteAdd,
@@ -197,17 +254,20 @@ contract Calibrator is ICalibrator {
         IUniswapV2Pair pool,
         uint256 liquidityRemove,
         uint256 amountBuy
-    ) external view returns (
-        uint256 reserveBase,
-        uint256 reserveQuote,
-        uint256 amountBase,
-        uint256 liquidityAfter
-    ) {
+    )
+        public
+        view
+        returns (
+            uint256 reserveBase,
+            uint256 reserveQuote,
+            uint256 amountBase,
+            uint256 liquidityAfter
+        )
+    {
         Pool memory pBefore;
 
         IERC20 token = tokenFromPool(pool);
-        (pBefore.reserveBase,
-         pBefore.reserveQuote) = getReserves(
+        (pBefore.reserveBase, pBefore.reserveQuote) = getReserves(
             pool,
             address(base),
             address(token)
@@ -215,109 +275,87 @@ contract Calibrator is ICalibrator {
         pBefore.totalSupply = pool.totalSupply();
         pBefore.kLast = pool.kLast();
 
-        (Pool memory pAfter,
-         Wallet memory wAfter
-         ) = estimate(
+        (Pool memory pAfter, Wallet memory wAfter) = estimate(
             pBefore,
             liquidityRemove,
             amountBuy
         );
 
-        return (pAfter.reserveBase,
-                pAfter.reserveQuote,
-                wAfter.amountBase,
-                wAfter.liquidity);
+        return (
+            pAfter.reserveBase,
+            pAfter.reserveQuote,
+            wAfter.amountBase,
+            wAfter.liquidity
+        );
     }
-    
-    function estimateBuyNow(
-        IUniswapV2Pair pool,
-        uint256 amountBaseBuy
-    ) external view returns (
-        uint256 reserveBase,
-        uint256 reserveQuote,
-        uint256 amountTokenSell
-    ) {
 
+    function estimateBuyNow(IUniswapV2Pair pool, uint256 amountBaseBuy)
+        external
+        view
+        returns (
+            uint256 reserveBase,
+            uint256 reserveQuote,
+            uint256 amountTokenSell
+        )
+    {
         IERC20 token = tokenFromPool(pool);
-        (uint256 reserveBaseBefore,
-         uint256 reserveQuoteBefore) = getReserves(
+        (uint256 reserveBaseBefore, uint256 reserveQuoteBefore) = getReserves(
             pool,
             address(base),
             address(token)
         );
 
-        (reserveBase,
-         reserveQuote,
-         amountTokenSell
-         ) = estimateBuy(
+        (reserveBase, reserveQuote, amountTokenSell) = estimateBuy(
             reserveBaseBefore,
             reserveQuoteBefore,
             amountBaseBuy
         );
 
-        return (reserveBase,
-                reserveQuote,
-                amountTokenSell);
+        return (reserveBase, reserveQuote, amountTokenSell);
     }
-    
-    function estimateSellNow(
-        IUniswapV2Pair pool,
-        uint256 amountBaseSell
-    ) external view returns (
-        uint256 reserveBase,
-        uint256 reserveQuote,
-        uint256 amountTokenBuy
-    ) {
 
+    function estimateSellNow(IUniswapV2Pair pool, uint256 amountBaseSell)
+        external
+        view
+        returns (
+            uint256 reserveBase,
+            uint256 reserveQuote,
+            uint256 amountTokenBuy
+        )
+    {
         IERC20 token = tokenFromPool(pool);
-        (uint256 reserveBaseBefore,
-         uint256 reserveQuoteBefore) = getReserves(
+        (uint256 reserveBaseBefore, uint256 reserveQuoteBefore) = getReserves(
             pool,
             address(base),
             address(token)
         );
 
-        (reserveBase,
-         reserveQuote,
-         amountTokenBuy
-         ) = estimateBuy(
+        (reserveBase, reserveQuote, amountTokenBuy) = estimateSell(
             reserveBaseBefore,
             reserveQuoteBefore,
             amountBaseSell
         );
 
-        return (reserveBase,
-                reserveQuote,
-                amountTokenBuy);
+        return (reserveBase, reserveQuote, amountTokenBuy);
     }
 
     function estimate(
         Pool memory pBefore,
         uint256 liquidityRemove,
         uint256 amountBaseBuy
-    ) public view returns (
-        Pool memory pAfter,
-        Wallet memory wAfter
-    ) {
-
-        (Pool memory pAfterRemove,
-         Wallet memory wAfterRemove
-         ) = estimateRemove(
+    ) public view returns (Pool memory pAfter, Wallet memory wAfter) {
+        (Pool memory pAfterRemove, Wallet memory wAfterRemove) = estimateRemove(
             pBefore,
             liquidityRemove
         );
 
-        (Pool memory pAfterBuy,
-         Wallet memory wAfterBuy,
-        ) = estimateBuy(
+        (Pool memory pAfterBuy, Wallet memory wAfterBuy, ) = estimateBuy(
             pAfterRemove,
             wAfterRemove,
             amountBaseBuy
         );
 
-        (Pool memory pAfterAdd,
-         Wallet memory wAfterAdd
-         ) = estimateAdd(
+        (Pool memory pAfterAdd, Wallet memory wAfterAdd) = estimateAdd(
             pAfterBuy,
             wAfterBuy
         );
@@ -326,13 +364,11 @@ contract Calibrator is ICalibrator {
         wAfter = wAfterAdd;
     }
 
-    function estimateRemove(
-        Pool memory pBefore,
-        uint256 liquidityRemove
-    ) public view returns (
-        Pool memory pAfter,
-        Wallet memory wAfter
-    ) {
+    function estimateRemove(Pool memory pBefore, uint256 liquidityRemove)
+        public
+        view
+        returns (Pool memory pAfter, Wallet memory wAfter)
+    {
         pAfter = pBefore;
 
         uint256 reserveBase = pBefore.reserveBase;
@@ -360,11 +396,15 @@ contract Calibrator is ICalibrator {
         Pool memory pBefore,
         Wallet memory wBefore,
         uint256 amountBaseBuy
-    ) public view returns (
-        Pool memory pAfter,
-        Wallet memory wAfter,
-        uint256 amountTokenSell
-    ) {
+    )
+        public
+        view
+        returns (
+            Pool memory pAfter,
+            Wallet memory wAfter,
+            uint256 amountTokenSell
+        )
+    {
         pAfter = pBefore;
         wAfter = wBefore;
 
@@ -382,13 +422,11 @@ contract Calibrator is ICalibrator {
         // console.log("reserves after buy", pAfter.reserveBase, pAfter.reserveQuote);
     }
 
-    function estimateAdd(
-        Pool memory pBefore,
-        Wallet memory wBefore
-    ) public view returns (
-        Pool memory pAfter,
-        Wallet memory wAfter
-    ) {
+    function estimateAdd(Pool memory pBefore, Wallet memory wBefore)
+        public
+        view
+        returns (Pool memory pAfter, Wallet memory wAfter)
+    {
         pAfter = pBefore;
         wAfter = wBefore;
 
@@ -398,7 +436,11 @@ contract Calibrator is ICalibrator {
         uint256 kLast = pBefore.kLast;
         uint256 amountQuoteAdd = wBefore.amountQuote;
 
-        uint256 amountBaseAdd = quote(amountQuoteAdd, reserveQuote, reserveBase);
+        uint256 amountBaseAdd = quote(
+            amountQuoteAdd,
+            reserveQuote,
+            reserveBase
+        );
         wAfter.amountBase = wBefore.amountBase - amountBaseAdd;
         wAfter.amountQuote = wBefore.amountQuote - amountQuoteAdd;
 
@@ -425,15 +467,24 @@ contract Calibrator is ICalibrator {
         uint256 totalSupplyBefore,
         uint256 kLastBefore,
         uint256 liquidityRemove
-    ) public view returns (
-        uint256 reserveBaseAfter,
-        uint256 reserveQuoteAfter,
-        uint256 totalSupplyAfter,
-        uint256 kLastAfter,
-        uint256 amountBaseAfter,
-        uint256 amountQuoteAfter
-    ) {
-        uint256 totalSupply = mintFee(reserveBaseBefore, reserveQuoteBefore, totalSupplyBefore, kLastBefore);
+    )
+        public
+        view
+        returns (
+            uint256 reserveBaseAfter,
+            uint256 reserveQuoteAfter,
+            uint256 totalSupplyAfter,
+            uint256 kLastAfter,
+            uint256 amountBaseAfter,
+            uint256 amountQuoteAfter
+        )
+    {
+        uint256 totalSupply = mintFee(
+            reserveBaseBefore,
+            reserveQuoteBefore,
+            totalSupplyBefore,
+            kLastBefore
+        );
 
         amountBaseAfter = (liquidityRemove * reserveBaseBefore) / totalSupply;
         amountQuoteAfter = (liquidityRemove * reserveQuoteBefore) / totalSupply;
@@ -450,12 +501,15 @@ contract Calibrator is ICalibrator {
         uint256 reserveBaseBefore,
         uint256 reserveQuoteBefore,
         uint256 amountBaseBuy
-    ) public view returns (
-        uint256 reserveBaseAfter,
-        uint256 reserveQuoteAfter,
-        uint256 amountQuoteSell
-    ) {
-
+    )
+        public
+        view
+        returns (
+            uint256 reserveBaseAfter,
+            uint256 reserveQuoteAfter,
+            uint256 amountQuoteSell
+        )
+    {
         amountQuoteSell = getAmountIn(
             amountBaseBuy,
             reserveQuoteBefore,
@@ -470,11 +524,15 @@ contract Calibrator is ICalibrator {
         uint256 reserveBaseBefore,
         uint256 reserveQuoteBefore,
         uint256 amountBaseSell
-    ) public view returns (
-        uint256 reserveBaseAfter,
-        uint256 reserveQuoteAfter,
-        uint256 amountQuoteBuy
-    ) {
+    )
+        public
+        view
+        returns (
+            uint256 reserveBaseAfter,
+            uint256 reserveQuoteAfter,
+            uint256 amountQuoteBuy
+        )
+    {
         amountQuoteBuy = getAmountOut(
             amountBaseSell,
             reserveBaseBefore,
@@ -490,18 +548,30 @@ contract Calibrator is ICalibrator {
         uint256 totalSupplyBefore,
         uint256 kLastBefore,
         uint256 amountQuoteAdd
-    ) public view returns (
-        uint256 reserveBaseAfter,
-        uint256 reserveQuoteAfter,
-        uint256 totalSupplyAfter,
-        uint256 kLastAfter,
-        uint256 amountBaseAdd,
-        uint256 liquidity
-    ) {
+    )
+        public
+        view
+        returns (
+            uint256 reserveBaseAfter,
+            uint256 reserveQuoteAfter,
+            uint256 totalSupplyAfter,
+            uint256 kLastAfter,
+            uint256 amountBaseAdd,
+            uint256 liquidity
+        )
+    {
+        amountBaseAdd = quote(
+            amountQuoteAdd,
+            reserveQuoteBefore,
+            reserveBaseBefore
+        );
 
-        amountBaseAdd = quote(amountQuoteAdd, reserveQuoteBefore, reserveBaseBefore);
-
-        uint256 totalSupply = mintFee(reserveBaseBefore, reserveQuoteBefore, totalSupplyBefore, kLastBefore);
+        uint256 totalSupply = mintFee(
+            reserveBaseBefore,
+            reserveQuoteBefore,
+            totalSupplyBefore,
+            kLastBefore
+        );
 
         liquidity = min(
             (amountBaseAdd * totalSupplyAfter) / reserveBaseBefore,
@@ -542,17 +612,27 @@ contract Calibrator is ICalibrator {
         return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 
-    function tokenFromPool(IUniswapV2Pair pool) public view returns (IERC20 token) {
+    function tokenFromPool(IUniswapV2Pair pool)
+        public
+        view
+        returns (IERC20 token)
+    {
         address token0 = pool.token0();
         address token1 = pool.token1();
         token = token0 == address(base) ? IERC20(token1) : IERC20(token0);
     }
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
-    function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
-        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'UniswapV2Library: ZERO_ADDRESS');
+    function sortTokens(address tokenA, address tokenB)
+        internal
+        pure
+        returns (address token0, address token1)
+    {
+        require(tokenA != tokenB, "UniswapV2Library: IDENTICAL_ADDRESSES");
+        (token0, token1) = tokenA < tokenB
+            ? (tokenA, tokenB)
+            : (tokenB, tokenA);
+        require(token0 != address(0), "UniswapV2Library: ZERO_ADDRESS");
     }
 
     // fetches and sorts the reserves for a pair
@@ -561,56 +641,73 @@ contract Calibrator is ICalibrator {
         IUniswapV2Pair pool,
         address tokenA,
         address tokenB
-    ) public view returns (uint reserveA, uint reserveB) {
-        (address token0,) = sortTokens(tokenA, tokenB);
-        (uint reserve0, uint reserve1,) = pool.getReserves();
-        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+    ) public view returns (uint256 reserveA, uint256 reserveB) {
+        (address token0, ) = sortTokens(tokenA, tokenB);
+        (uint256 reserve0, uint256 reserve1, ) = pool.getReserves();
+        (reserveA, reserveB) = tokenA == token0
+            ? (reserve0, reserve1)
+            : (reserve1, reserve0);
     }
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
-    function quote(uint amountA, uint reserveA, uint reserveB) public pure returns (uint amountB) {
-        require(amountA > 0, 'UniswapV2Library: INSUFFICIENT_AMOUNT');
-        require(reserveA > 0 && reserveB > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+    function quote(
+        uint256 amountA,
+        uint256 reserveA,
+        uint256 reserveB
+    ) public pure returns (uint256 amountB) {
+        require(amountA > 0, "UniswapV2Library: INSUFFICIENT_AMOUNT");
+        require(
+            reserveA > 0 && reserveB > 0,
+            "UniswapV2Library: INSUFFICIENT_LIQUIDITY"
+        );
         amountB = (amountA * reserveB) / reserveA;
     }
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public view returns (uint amountOut) {
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) public view returns (uint256 amountOut) {
         // require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
         // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
         if (equal(dex, "CAKE")) {
-            uint amountInWithFee = amountIn * 9975;
-            uint numerator = amountInWithFee * reserveOut;
-            uint denominator = (reserveIn * 10000) + amountInWithFee;
+            uint256 amountInWithFee = amountIn * 9975;
+            uint256 numerator = amountInWithFee * reserveOut;
+            uint256 denominator = (reserveIn * 10000) + amountInWithFee;
             amountOut = numerator / denominator;
         } else if (equal(dex, "SPOOKY")) {
-            uint amountInWithFee = amountIn * 998;
-            uint numerator = amountInWithFee * reserveOut;
-            uint denominator = (reserveIn * 1000) + amountInWithFee;
+            uint256 amountInWithFee = amountIn * 998;
+            uint256 numerator = amountInWithFee * reserveOut;
+            uint256 denominator = (reserveIn * 1000) + amountInWithFee;
             amountOut = numerator / denominator;
         } else {
-            uint amountInWithFee = amountIn * 997;
-            uint numerator = amountInWithFee * reserveOut;
-            uint denominator = (reserveIn * 1000) + amountInWithFee;
+            uint256 amountInWithFee = amountIn * 997;
+            uint256 numerator = amountInWithFee * reserveOut;
+            uint256 denominator = (reserveIn * 1000) + amountInWithFee;
             amountOut = numerator / denominator;
         }
     }
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
-    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public view returns (uint amountIn) {
+    function getAmountIn(
+        uint256 amountOut,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) public view returns (uint256 amountIn) {
         // require(amountOut > 0, 'UniswapV2Library: INSUFFICIENT_OUTPUT_AMOUNT');
         // require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
         if (equal(dex, "CAKE")) {
-            uint numerator = reserveIn * amountOut * 10000;
-            uint denominator = (reserveOut - amountOut) * 9975;
+            uint256 numerator = reserveIn * amountOut * 10000;
+            uint256 denominator = (reserveOut - amountOut) * 9975;
             amountIn = (numerator / denominator) + 1;
         } else if (equal(dex, "SPOOKY")) {
-            uint numerator = reserveIn * amountOut * 1000;
-            uint denominator = (reserveOut - amountOut) * 998;
+            uint256 numerator = reserveIn * amountOut * 1000;
+            uint256 denominator = (reserveOut - amountOut) * 998;
             amountIn = (numerator / denominator) + 1;
         } else {
-            uint numerator = reserveIn * amountOut * 1000;
-            uint denominator = (reserveOut - amountOut) * 997;
+            uint256 numerator = reserveIn * amountOut * 1000;
+            uint256 denominator = (reserveOut - amountOut) * 997;
             amountIn = (numerator / denominator) + 1;
         }
     }
@@ -620,30 +717,15 @@ contract Calibrator is ICalibrator {
         uint256 reserve1,
         uint256 totalSupply,
         uint256 kLast
-    ) internal view returns (
-        uint256 totalSupplyNew
-    ) {
+    ) internal view returns (uint256 totalSupplyNew) {
         if (equal(dex, "MDEX")) {
             if (kLast != 0) {
-                uint rootK = sqrt(reserve0 * reserve1);
-                uint rootKLast = sqrt(kLast);
+                uint256 rootK = sqrt(reserve0 * reserve1);
+                uint256 rootKLast = sqrt(kLast);
                 if (rootK > rootKLast) {
-                    uint numerator = totalSupply * (rootK - rootKLast);
-                    uint denominator = rootKLast;
-                    uint liquidityFee = numerator / denominator;
-                    if (liquidityFee > 0) {
-                        totalSupply += liquidityFee;
-                    }
-                }
-            }
-        } else if (equal(dex, "QUICK")) {
-            if (kLast != 0) {
-                uint rootK = sqrt(reserve0 * reserve1);
-                uint rootKLast = sqrt(kLast);
-                if (rootK > rootKLast) {
-                    uint numerator = totalSupply * (rootK - rootKLast);
-                    uint denominator = (rootK * 5) + rootKLast;
-                    uint liquidityFee = numerator / denominator;
+                    uint256 numerator = totalSupply * (rootK - rootKLast);
+                    uint256 denominator = rootKLast;
+                    uint256 liquidityFee = numerator / denominator;
                     if (liquidityFee > 0) {
                         totalSupply += liquidityFee;
                     }
@@ -651,12 +733,12 @@ contract Calibrator is ICalibrator {
             }
         } else if (equal(dex, "CAKE")) {
             if (kLast != 0) {
-                uint rootK = sqrt(reserve0 * reserve1);
-                uint rootKLast = sqrt(kLast);
+                uint256 rootK = sqrt(reserve0 * reserve1);
+                uint256 rootKLast = sqrt(kLast);
                 if (rootK > rootKLast) {
-                    uint numerator = totalSupply * (rootK - rootKLast);
-                    uint denominator = (rootK * 17) + rootKLast;
-                    uint liquidityFee = numerator / denominator;
+                    uint256 numerator = totalSupply * (rootK - rootKLast);
+                    uint256 denominator = (rootK * 17) + rootKLast;
+                    uint256 liquidityFee = numerator / denominator;
                     if (liquidityFee > 0) {
                         totalSupply += liquidityFee;
                     }
@@ -664,25 +746,25 @@ contract Calibrator is ICalibrator {
             }
         } else if (equal(dex, "SPOOKY")) {
             if (kLast != 0) {
-                uint rootK = sqrt(reserve0 * reserve1);
-                uint rootKLast = sqrt(kLast);
+                uint256 rootK = sqrt(reserve0 * reserve1);
+                uint256 rootKLast = sqrt(kLast);
                 if (rootK > rootKLast) {
-                    uint numerator = totalSupply * (rootK - rootKLast);
-                    uint denominator = (rootK * 3) + rootKLast;
-                    uint liquidityFee = numerator / denominator;
+                    uint256 numerator = totalSupply * (rootK - rootKLast);
+                    uint256 denominator = (rootK * 3) + rootKLast;
+                    uint256 liquidityFee = numerator / denominator;
                     if (liquidityFee > 0) {
                         totalSupply += liquidityFee;
                     }
                 }
             }
-        } else if (equal(dex, "SPIRIT")) {
+        } else {
             if (kLast != 0) {
-                uint rootK = sqrt(reserve0 * reserve1);
-                uint rootKLast = sqrt(kLast);
+                uint256 rootK = sqrt(reserve0 * reserve1);
+                uint256 rootKLast = sqrt(kLast);
                 if (rootK > rootKLast) {
-                    uint numerator = totalSupply * (rootK - rootKLast);
-                    uint denominator = (rootK * 5) + rootKLast;
-                    uint liquidityFee = numerator / denominator;
+                    uint256 numerator = totalSupply * (rootK - rootKLast);
+                    uint256 denominator = (rootK * 5) + rootKLast;
+                    uint256 liquidityFee = numerator / denominator;
                     if (liquidityFee > 0) {
                         totalSupply += liquidityFee;
                     }
