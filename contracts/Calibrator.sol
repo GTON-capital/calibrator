@@ -2,11 +2,11 @@
 pragma solidity >=0.8.0;
 
 import "./interfaces/ICalibrator.sol";
-// import "hardhat/console.sol";
+
+import "hardhat/console.sol";
 
 /// @title Calibrator
 contract Calibrator is ICalibrator {
-
     address public owner;
     IERC20 public base;
     IUniswapV2Router01 public router;
@@ -458,6 +458,217 @@ contract Calibrator is ICalibrator {
         pAfter.reserveQuote = reserveQuote + amountQuoteAdd;
 
         pAfter.kLast = pAfter.reserveBase * pAfter.reserveQuote;
+    }
+
+    // **** PICK FUNCTIONS ****
+    function pickBuyNow(
+        IUniswapV2Pair pool,
+        uint256 price, // 2 decimals
+        uint256 start,
+        uint256 end
+    )
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        IERC20 token = tokenFromPool(pool);
+        (uint256 reserveBaseBefore, uint256 reserveQuoteBefore) = getReserves(
+            pool,
+            address(base),
+            address(token)
+        );
+        return
+            pickBuy(reserveBaseBefore, reserveQuoteBefore, price, start, end);
+    }
+
+    function pickSellNow(
+        IUniswapV2Pair pool,
+        uint256 price, // 2 decimals
+        uint256 start,
+        uint256 end
+    )
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        IERC20 token = tokenFromPool(pool);
+        (uint256 reserveBaseBefore, uint256 reserveQuoteBefore) = getReserves(
+            pool,
+            address(base),
+            address(token)
+        );
+        return
+            pickSell(reserveBaseBefore, reserveQuoteBefore, price, start, end);
+    }
+
+    function pickBuy(
+        uint256 reserveBaseBefore,
+        uint256 reserveQuoteBefore,
+        uint256 price, // 2 decimals
+        uint256 start,
+        uint256 end
+    )
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        uint256 ds = 100;
+        if ((reserveQuoteBefore * ds) / reserveBaseBefore == price) {
+            console.log(
+                // "--",
+                reserveBaseBefore,
+                reserveQuoteBefore,
+                (reserveQuoteBefore * ds) / reserveBaseBefore,
+                0
+            );
+            return (reserveBaseBefore, reserveQuoteBefore, 0);
+        }
+        uint256 amountBaseBuy = (start + end) / 2;
+        if (start > end) {
+            return (reserveBaseBefore, reserveQuoteBefore, amountBaseBuy);
+        }
+        (
+            uint256 reserveBaseAfter,
+            uint256 reserveQuoteAfter,
+            uint256 amountQuoteSell
+        ) = estimateBuy(reserveBaseBefore, reserveQuoteBefore, amountBaseBuy);
+        if ((reserveQuoteAfter * ds) / reserveBaseAfter == price) {
+            console.log(
+                // "eq",
+                reserveBaseAfter,
+                reserveQuoteAfter,
+                (reserveQuoteAfter * ds) / reserveBaseAfter,
+                amountBaseBuy
+            );
+            return (reserveBaseAfter, reserveQuoteAfter, amountBaseBuy);
+        }
+        if ((reserveQuoteAfter * ds) / reserveBaseAfter < price) {
+            console.log(
+                // "lt",
+                reserveBaseAfter,
+                reserveQuoteAfter,
+                (reserveQuoteAfter * ds) / reserveBaseAfter,
+                amountBaseBuy
+            );
+            return
+                pickBuy(
+                    reserveBaseBefore,
+                    reserveQuoteBefore,
+                    price,
+                    amountBaseBuy + 1,
+                    end
+                );
+        }
+        if ((reserveQuoteAfter * ds) / reserveBaseAfter > price) {
+            console.log(
+                // "gt",
+                reserveBaseAfter,
+                reserveQuoteAfter,
+                (reserveQuoteAfter * ds) / reserveBaseAfter,
+                amountBaseBuy
+            );
+            return
+                pickBuy(
+                    reserveBaseBefore,
+                    reserveQuoteBefore,
+                    price,
+                    start,
+                    amountBaseBuy - 1
+                );
+        }
+    }
+
+    function pickSell(
+        uint256 reserveBaseBefore,
+        uint256 reserveQuoteBefore,
+        uint256 price, // 2 decimals
+        uint256 start,
+        uint256 end
+    )
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        uint256 ds = 100;
+        if ((reserveQuoteBefore * ds) / reserveBaseBefore == price) {
+            console.log(
+                // "--",
+                reserveBaseBefore,
+                reserveQuoteBefore,
+                (reserveQuoteBefore * ds) / reserveBaseBefore,
+                0
+            );
+            return (reserveBaseBefore, reserveQuoteBefore, 0);
+        }
+        uint256 amountBaseSell = (start + end) / 2;
+        if (start > end) {
+            return (reserveBaseBefore, reserveQuoteBefore, amountBaseSell);
+        }
+        (
+            uint256 reserveBaseAfter,
+            uint256 reserveQuoteAfter,
+            uint256 amountQuoteSell
+        ) = estimateSell(reserveBaseBefore, reserveQuoteBefore, amountBaseSell);
+        if ((reserveQuoteAfter * ds) / reserveBaseAfter == price) {
+            console.log(
+                // "eq",
+                reserveBaseAfter,
+                reserveQuoteAfter,
+                (reserveQuoteAfter * ds) / reserveBaseAfter,
+                amountBaseSell
+            );
+            return (reserveBaseAfter, reserveQuoteAfter, amountBaseSell);
+        }
+        if ((reserveQuoteAfter * ds) / reserveBaseAfter > price) {
+            console.log(
+                // "lt",
+                reserveBaseAfter,
+                reserveQuoteAfter,
+                (reserveQuoteAfter * ds) / reserveBaseAfter,
+                amountBaseSell
+            );
+            return
+                pickSell(
+                    reserveBaseBefore,
+                    reserveQuoteBefore,
+                    price,
+                    amountBaseSell + 1,
+                    end
+                );
+        }
+        if ((reserveQuoteAfter * ds) / reserveBaseAfter < price) {
+            console.log(
+                // "gt",
+                reserveBaseAfter,
+                reserveQuoteAfter,
+                (reserveQuoteAfter * ds) / reserveBaseAfter,
+                amountBaseSell
+            );
+            return
+                pickSell(
+                    reserveBaseBefore,
+                    reserveQuoteBefore,
+                    price,
+                    start,
+                    amountBaseSell - 1
+                );
+        }
     }
 
     // **** STEP FUNCTIONS ****
