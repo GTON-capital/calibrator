@@ -131,6 +131,47 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
     timestamp + 3600
   )
 
+  const liquidity = await pair.balanceOf(wallet.address);
+
+  await pair.approve(router.address, liquidity);
+
+  // reapply liquidity to ignore 10**3 lp that is lost on pool initialization
+  await router.removeLiquidity(
+    tokenBase.address,
+    tokenQuote.address,
+    liquidity,
+    0,
+    0,
+    wallet.address,
+    timestamp + 3600
+  );
+
+  const [reserveBase, reserveQuote] = await pair.getReserves();
+
+  liquidityBase = (liquidityBase).sub(reserveBase);
+
+  // Library.quote()
+  liquidityQuote = liquidityBase.mul(reserveQuote).div(reserveBase);
+
+  await tokenBase.approve(router.address, liquidityBase);
+
+  await tokenQuote.approve(router.address, liquidityQuote);
+
+  await router.addLiquidity(
+    tokenBase.address,
+    tokenQuote.address,
+    liquidityBase,
+    liquidityQuote,
+    liquidityBase,
+    0,
+    wallet.address,
+    timestamp + 3600
+  )
+
+  // base reserve     "10000000000000000000"
+  // quote reserve    "49933035714285714285"
+  // liquidityBalance "22321428571428570428"
+
   return {
     tokenBase,
     tokenQuote,
