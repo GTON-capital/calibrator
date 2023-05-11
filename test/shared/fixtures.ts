@@ -233,7 +233,6 @@ export const calibratorFixture: Fixture<CalibratorFixture> = async function(
   const calibrator = await ethers.getContractFactory(
     "Calibrator"
   ).then((contract) => contract.deploy(
-    router.address,
     pair.address,
     tokenBase.address,
     tokenQuote.address

@@ -4,27 +4,22 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IPair.sol";
-import "./interfaces/IRouter02.sol";
 
 contract Calibrator {
-    IRouter02 public router;
     IPair public pair;
     IERC20 public tokenBase;
     IERC20 public tokenQuote;
 
-    constructor(
-        address _router,
-        address _pair,
-        address _tokenBase,
-        address _tokenQuote
-    ) {
-        router = IRouter02(_router);
+    constructor(address _pair, address _tokenBase, address _tokenQuote) {
         pair = IPair(_pair);
         tokenBase = IERC20(_tokenBase);
         tokenQuote = IERC20(_tokenQuote);
     }
 
-    function setRatio(uint256 targetRatioBase, uint256 targetRatioQuote) external {
+    function setRatio(
+        uint256 targetRatioBase,
+        uint256 targetRatioQuote
+    ) external {
         (uint256 reserveBaseInvariant, , ) = pair.getReserves();
 
         _removeLiquidity(reserveBaseInvariant);
@@ -89,7 +84,8 @@ contract Calibrator {
 
         uint256 availableBase = (removedLiquidity * reserveBase) / totalSupply;
 
-        uint256 availableQuote = (removedLiquidity * reserveQuote) / totalSupply;
+        uint256 availableQuote = (removedLiquidity * reserveQuote) /
+            totalSupply;
 
         totalSupply -= removedLiquidity;
 
@@ -166,19 +162,9 @@ contract Calibrator {
             reserveBaseInvariant
         );
 
-        pair.transferFrom(msg.sender, address(this), removedLiquidity);
+        pair.transferFrom(msg.sender, address(pair), removedLiquidity);
 
-        pair.approve(address(router), removedLiquidity);
-
-        router.removeLiquidity(
-            address(tokenBase),
-            address(tokenQuote),
-            removedLiquidity,
-            0,
-            0,
-            address(this),
-            block.timestamp + 3600
-        );
+        pair.burn(address(this));
     }
 
     function _swapToPrice(
@@ -198,23 +184,20 @@ contract Calibrator {
                 targetRatioQuote
             );
 
-        if (baseToQuote) {
-            tokenBase.approve(address(router), amountIn);
-        } else {
-            tokenQuote.approve(address(router), amountIn);
-        }
+        IERC20 tokenIn = baseToQuote ? tokenBase : tokenQuote;
 
-        address[] memory path = new address[](2);
-        path[0] = baseToQuote ? address(tokenBase) : address(tokenQuote);
-        path[1] = baseToQuote ? address(tokenQuote) : address(tokenBase);
+        tokenIn.transfer(address(pair), amountIn);
 
-        router.swapExactTokensForTokens(
-            amountIn,
-            amountOut,
-            path,
-            address(this),
-            block.timestamp + 3600
+        (address token0, ) = _sortTokens(
+            address(tokenBase),
+            address(tokenQuote)
         );
+
+        (uint amount0Out, uint amount1Out) = address(tokenIn) == token0
+            ? (uint(0), amountOut)
+            : (amountOut, uint(0));
+
+        pair.swap(amount0Out, amount1Out, address(this), new bytes(0));
     }
 
     function _addLiquidity(uint256 reserveBaseInvariant) internal {
@@ -226,23 +209,12 @@ contract Calibrator {
             reserveBaseInvariant
         );
 
-        tokenBase.approve(address(router), addedBase);
+        tokenBase.transfer(address(pair), addedBase);
 
-        // TODO: allow to transfer a variable percent from the quote balance
-        tokenQuote.transferFrom(msg.sender, address(this), addedQuote);
+        // TODO: take only missing tokens from sender
+        tokenQuote.transferFrom(msg.sender, address(pair), addedQuote);
 
-        tokenQuote.approve(address(router), addedQuote);
-
-        router.addLiquidity(
-            address(tokenBase),
-            address(tokenQuote),
-            addedBase,
-            addedQuote,
-            addedBase,
-            addedQuote,
-            address(this),
-            block.timestamp + 3600
-        );
+        pair.mint(address(this));
     }
 
     function _transfer() internal {
@@ -255,7 +227,11 @@ contract Calibrator {
 
     function _calculateRemoveLiquidity(
         uint256 reserveBaseInvariant
-    ) internal view returns (uint256 minimumLiquidity, uint256 removedliquidity) {
+    )
+        internal
+        view
+        returns (uint256 minimumLiquidity, uint256 removedliquidity)
+    {
         // TODO: liquidity owner from global variable instead of msg.sender
         uint256 availableLiquidity = pair.allowance(msg.sender, address(this));
 
@@ -281,8 +257,8 @@ contract Calibrator {
         uint256 targetRatioBase,
         uint256 targetRatioQuote
     ) internal pure {
-        // new base ratio with precision to three decimal places
-        uint256 newRatioBase3DP = Math.mulDiv(
+        // base ratio with precision to three decimal places
+        uint256 ratioBase3DP = Math.mulDiv(
             reserveBase,
             targetRatioQuote * 1000,
             reserveQuote
@@ -291,12 +267,12 @@ contract Calibrator {
         uint256 targetRatioBase3DP = targetRatioBase * 1000;
 
         require(
-            targetRatioBase3DP - 20 <= newRatioBase3DP,
+            targetRatioBase3DP - 20 <= ratioBase3DP,
             "_validatePrice: too low"
         );
 
         require(
-            newRatioBase3DP <= targetRatioBase3DP + 20,
+            ratioBase3DP <= targetRatioBase3DP + 20,
             "_validatePrice: too high"
         );
     }
@@ -327,7 +303,11 @@ contract Calibrator {
         uint256 reserveQuote,
         uint256 targetRatioBase,
         uint256 targetRatioQuote
-    ) internal pure returns (bool baseToQuote, uint256 amountIn, uint256 amountOut) {
+    )
+        internal
+        pure
+        returns (bool baseToQuote, uint256 amountIn, uint256 amountOut)
+    {
         baseToQuote =
             Math.mulDiv(reserveBase, targetRatioQuote, reserveQuote) <
             targetRatioBase;
@@ -353,6 +333,17 @@ contract Calibrator {
         amountOut = baseToQuote
             ? getAmountOut(amountIn, reserveBase, reserveQuote)
             : getAmountOut(amountIn, reserveQuote, reserveBase);
+    }
+
+    function _sortTokens(
+        address tokenA,
+        address tokenB
+    ) internal pure returns (address token0, address token1) {
+        require(tokenA != tokenB, "_sortTokens: IDENTICAL_ADDRESSES");
+        (token0, token1) = tokenA < tokenB
+            ? (tokenA, tokenB)
+            : (tokenB, tokenA);
+        require(token0 != address(0), "_sortTokens: ZERO_ADDRESS");
     }
 
     function _calculateAddLiquidity(

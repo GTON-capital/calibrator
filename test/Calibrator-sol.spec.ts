@@ -27,7 +27,6 @@ describe("Calibrator", () => {
     beforeEach("deploy test contracts", async () => {
         ;({ tokenBase,
             tokenQuote,
-            router,
             pair,
             calibrator} = await loadFixture(calibratorFixture))
     })
