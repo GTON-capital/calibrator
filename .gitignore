@@ -1,11 +1,13 @@
 *.DS_Store
 node_modules
+.idea/
+.nuxt/
+.DS_Store
+.env
+coverage
+coverage.json
+typechain
 
 #Hardhat files
 cache
 artifacts
-/.env
-*coverage*
-typechain/
-/abi/
-/.nuxt/

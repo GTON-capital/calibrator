@@ -10,49 +10,23 @@ export default {
   solidity: {
     compilers: [
       {
-        version: "0.8.0",
+        version: "0.8.19",
         settings: {
+          viaIR: true,
           optimizer: {
             enabled: true,
-            runs: 200
-          }
-        }
+            runs: 200,
+          },
+        },
       },
-      {
-        version: "0.6.6",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      },
-      {
-        version: "0.6.12",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      },
-      {
-        version: "0.5.16",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      }
-    ]
+    ],
   },
   abiExporter: {
     clear: true,
     flat: true,
-    spacing: 2
+    spacing: 2,
   },
   mocha: {
-    timeout: '100000000000000'
+    timeout: "100000000000000",
   }
-};
+}
