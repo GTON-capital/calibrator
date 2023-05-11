@@ -4,6 +4,7 @@ import { IERC20 } from "../../typechain/IERC20"
 import { IPair } from "../../typechain/IPair"
 import { IFactory } from "../../typechain/IFactory"
 import { IRouter02 } from "../../typechain/IRouter02"
+import { Calibrator } from "../../typechain/Calibrator"
 import {
   abi as ERC20ABI,
   bytecode as ERC20Bytecode
@@ -131,11 +132,44 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
     timestamp + 3600
   )
 
+  // `other` account adds liquidity
+  const liquidityBaseOther = BigNumber.from(1)
+
+  const liquidityQuoteOther = BigNumber.from(5)
+
+  await tokenBase.transfer(other.address, liquidityBaseOther)
+
+  await tokenQuote.transfer(other.address, liquidityQuoteOther)
+
+  await tokenBase.connect(other).approve(router.address, liquidityBaseOther)
+
+  await tokenQuote.connect(other).approve(router.address, liquidityQuoteOther)
+
+  block = await wallet.provider.getBlock("latest")
+
+  timestamp = block.timestamp
+
+  await router
+    .connect(other)
+    .addLiquidity(
+      tokenBase.address,
+      tokenQuote.address,
+      liquidityBaseOther,
+      liquidityQuoteOther,
+      liquidityBaseOther,
+      0,
+      other.address,
+      timestamp + 3600
+    )
+
+  // reapply liquidity
+  // to ignore 10**3 lp that is lost on pool initialization
+  // and liquidity of `other`
+  // and to reset base reserve to a round number
   const liquidity = await pair.balanceOf(wallet.address);
 
   await pair.approve(router.address, liquidity);
 
-  // reapply liquidity to ignore 10**3 lp that is lost on pool initialization
   await router.removeLiquidity(
     tokenBase.address,
     tokenQuote.address,
@@ -168,10 +202,6 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
     timestamp + 3600
   )
 
-  // base reserve     "10000000000000000000"
-  // quote reserve    "49933035714285714285"
-  // liquidityBalance "22321428571428570428"
-
   return {
     tokenBase,
     tokenQuote,
@@ -179,5 +209,43 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
     factory,
     router,
     pair
+  }
+}
+
+interface CalibratorFixture extends UniswapFixture {
+  calibrator: Calibrator
+}
+
+export const calibratorFixture: Fixture<CalibratorFixture> = async function(
+  [wallet, other],
+  provider
+): Promise<CalibratorFixture> {
+  const {
+    tokenBase,
+    tokenQuote,
+    weth,
+    router,
+    factory,
+    pair
+  } = await uniswapFixture([wallet, other], provider)
+
+
+  const calibrator = await ethers.getContractFactory(
+    "Calibrator"
+  ).then((contract) => contract.deploy(
+    router.address,
+    pair.address,
+    tokenBase.address,
+    tokenQuote.address
+  )) as Calibrator
+
+  return {
+    tokenBase,
+    tokenQuote,
+    weth,
+    router,
+    factory,
+    pair,
+    calibrator
   }
 }
