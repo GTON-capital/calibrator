@@ -23,26 +23,36 @@ contract Calibrator {
         tokenBase = IERC20(_tokenBase);
         tokenQuote = IERC20(_tokenQuote);
     }
-    // retrieve current pool ratio
-    function getRatio() view external returns (uint256 ratioBase, uint256 ratioQuote) {
-        (ratioBase, ratioQuote,) = pair
-            .getReserves();
-    }
 
-    function setRatio(
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote
-    ) external {
-        (uint256 reserveBaseInvariant, ,) = pair
-            .getReserves();
+    function setRatio(uint256 targetRatioBase, uint256 targetRatioQuote) external {
+        (uint256 reserveBaseInvariant, , ) = pair.getReserves();
 
         _removeLiquidity(reserveBaseInvariant);
 
         _swapToPrice(targetRatioBase, targetRatioQuote);
 
+        // validate price calibration
+        (uint256 reserveBase, uint256 reserveQuote, ) = pair.getReserves();
+
+        _validatePrice(
+            reserveBase,
+            reserveQuote,
+            targetRatioBase,
+            targetRatioQuote
+        );
+
         _addLiquidity(reserveBaseInvariant);
 
         _transfer();
+    }
+
+    // retrieve current pool ratio
+    function getRatio()
+        external
+        view
+        returns (uint256 ratioBase, uint256 ratioQuote)
+    {
+        (ratioBase, ratioQuote, ) = pair.getReserves();
     }
 
     // calculate amount of quote tokens needed to set price
@@ -52,30 +62,34 @@ contract Calibrator {
     function estimate(
         uint256 targetRatioBase,
         uint256 targetRatioQuote
-    ) view external returns (
-        bool baseToQuote,
-        uint256 requiredBase,
-        uint256 requiredQuote,
-        uint256 leftoverBase,
-        uint256 leftoverQuote,
-        uint256 leftoverLiquidity,
-        uint256 reserveBase,
-        uint256 reserveQuote
-    ) {
-        (reserveBase, reserveQuote,) = pair
-            .getReserves();
+    )
+        external
+        view
+        returns (
+            bool baseToQuote,
+            uint256 requiredBase,
+            uint256 requiredQuote,
+            uint256 leftoverBase,
+            uint256 leftoverQuote,
+            uint256 leftoverLiquidity,
+            uint256 reserveBase,
+            uint256 reserveQuote
+        )
+    {
+        (reserveBase, reserveQuote, ) = pair.getReserves();
 
         uint256 reserveBaseInvariant = reserveBase;
 
-        (uint256 minimumLiquidity,
-         uint256 removedLiquidity
+        (
+            uint256 minimumLiquidity,
+            uint256 removedLiquidity
         ) = _calculateRemoveLiquidity(reserveBaseInvariant);
 
         uint256 totalSupply = pair.totalSupply();
 
-        uint256 availableBase = removedLiquidity * reserveBase / totalSupply;
+        uint256 availableBase = (removedLiquidity * reserveBase) / totalSupply;
 
-        uint256 availableQuote = removedLiquidity * reserveQuote / totalSupply;
+        uint256 availableQuote = (removedLiquidity * reserveQuote) / totalSupply;
 
         totalSupply -= removedLiquidity;
 
@@ -86,14 +100,12 @@ contract Calibrator {
         uint256 amountIn;
         uint256 amountOut;
 
-        (baseToQuote,
-         amountIn,
-         amountOut) = _calculateSwapToPrice(
+        (baseToQuote, amountIn, amountOut) = _calculateSwapToPrice(
             reserveBase,
             reserveQuote,
             targetRatioBase,
             targetRatioQuote
-         );
+        );
 
         if (baseToQuote) {
             availableBase -= amountIn;
@@ -107,44 +119,52 @@ contract Calibrator {
             availableBase += amountOut;
         }
 
-        (uint256 amountBaseAdded,
-         uint256 amountQuoteAdded
-        ) = _calculateAddLiquidity(
+        _validatePrice(
+            reserveBase,
+            reserveQuote,
+            targetRatioBase,
+            targetRatioQuote
+        );
+
+        (uint256 addedBase, uint256 addedQuote) = _calculateAddLiquidity(
             reserveBase,
             reserveQuote,
             reserveBaseInvariant
-         );
+        );
 
         // TODO: fail if required is over a variable percent of quote balance
-        if (availableBase < amountBaseAdded) {
+        if (availableBase < addedBase) {
             leftoverBase = 0;
-            requiredBase = amountBaseAdded - availableBase;
+            requiredBase = addedBase - availableBase;
         } else {
-            leftoverBase = availableBase - amountBaseAdded;
+            leftoverBase = availableBase - addedBase;
             requiredBase = 0;
         }
 
-        if (availableQuote < amountQuoteAdded) {
+        if (availableQuote < addedQuote) {
             leftoverQuote = 0;
-            requiredQuote = amountQuoteAdded - availableQuote;
+            requiredQuote = addedQuote - availableQuote;
         } else {
-            leftoverQuote = availableQuote - amountQuoteAdded;
+            leftoverQuote = availableQuote - addedQuote;
             requiredQuote = 0;
         }
 
         uint256 mintedLiquidity = Math.min(
-            amountBaseAdded * totalSupply / reserveBase,
-            amountQuoteAdded * totalSupply / reserveQuote
+            (addedBase * totalSupply) / reserveBase,
+            (addedQuote * totalSupply) / reserveQuote
         );
 
-        reserveBase += amountBaseAdded;
-        reserveQuote += amountQuoteAdded;
+        reserveBase += addedBase;
+
+        reserveQuote += addedQuote;
+
         leftoverLiquidity = minimumLiquidity + mintedLiquidity;
     }
 
-
     function _removeLiquidity(uint256 reserveBaseInvariant) internal {
-        (,uint256 removedLiquidity) = _calculateRemoveLiquidity(reserveBaseInvariant);
+        (, uint256 removedLiquidity) = _calculateRemoveLiquidity(
+            reserveBaseInvariant
+        );
 
         pair.transferFrom(msg.sender, address(this), removedLiquidity);
 
@@ -165,17 +185,18 @@ contract Calibrator {
         uint256 targetRatioBase,
         uint256 targetRatioQuote
     ) internal {
-        (uint256 reserveBase, uint256 reserveQuote,) =
-            pair.getReserves();
+        (uint256 reserveBase, uint256 reserveQuote, ) = pair.getReserves();
 
-        (bool baseToQuote,
-         uint256 amountIn,
-         uint256 amountOut) = _calculateSwapToPrice(
-            reserveBase,
-            reserveQuote,
-            targetRatioBase,
-            targetRatioQuote
-         );
+        (
+            bool baseToQuote,
+            uint256 amountIn,
+            uint256 amountOut
+        ) = _calculateSwapToPrice(
+                reserveBase,
+                reserveQuote,
+                targetRatioBase,
+                targetRatioQuote
+            );
 
         if (baseToQuote) {
             tokenBase.approve(address(router), amountIn);
@@ -194,52 +215,31 @@ contract Calibrator {
             address(this),
             block.timestamp + 3600
         );
-
-        // validate price calibration
-        (uint256 reserveBaseAfter, uint256 reserveQuoteAfter,) = pair
-            .getReserves();
-
-        // new base ratio with precision to three decimal places
-        uint256 newRatioBase3DP = Math.mulDiv(
-            reserveBaseAfter,
-            targetRatioQuote * 1000,
-            reserveQuoteAfter
-        );
-
-        uint256 targetRatioBase3DP = targetRatioBase * 1000;
-
-        require(targetRatioBase3DP - 20 <= newRatioBase3DP, "E3");
-
-        require(newRatioBase3DP <= targetRatioBase3DP + 20, "E4");
     }
 
     function _addLiquidity(uint256 reserveBaseInvariant) internal {
-        (uint256 reserveBase, uint256 reserveQuote,) = pair
-            .getReserves();
+        (uint256 reserveBase, uint256 reserveQuote, ) = pair.getReserves();
 
-        (uint256 amountBaseAdded,
-         uint256 amountQuoteAdded
-        ) = _calculateAddLiquidity(
+        (uint256 addedBase, uint256 addedQuote) = _calculateAddLiquidity(
             reserveBase,
             reserveQuote,
             reserveBaseInvariant
-         );
+        );
 
-        tokenBase.approve(address(router), amountBaseAdded);
+        tokenBase.approve(address(router), addedBase);
 
         // TODO: allow to transfer a variable percent from the quote balance
-        // TODO: transfer only missing portion of tokens
-        tokenQuote.transferFrom(msg.sender, address(this), amountQuoteAdded);
+        tokenQuote.transferFrom(msg.sender, address(this), addedQuote);
 
-        tokenQuote.approve(address(router), amountQuoteAdded);
+        tokenQuote.approve(address(router), addedQuote);
 
         router.addLiquidity(
             address(tokenBase),
             address(tokenQuote),
-            amountBaseAdded,
-            amountQuoteAdded,
-            amountBaseAdded,
-            amountQuoteAdded,
+            addedBase,
+            addedQuote,
+            addedBase,
+            addedQuote,
             address(this),
             block.timestamp + 3600
         );
@@ -251,16 +251,12 @@ contract Calibrator {
         tokenBase.transfer(msg.sender, tokenBase.balanceOf(address(this)));
 
         tokenQuote.transfer(msg.sender, tokenQuote.balanceOf(address(this)));
-
     }
 
     function _calculateRemoveLiquidity(
         uint256 reserveBaseInvariant
-    ) view internal returns (
-        uint256 minimumLiquidity,
-        uint256 removedliquidity
-    ) {
-        // TODO: bring liquidity owner to variable instead of msg.sender
+    ) internal view returns (uint256 minimumLiquidity, uint256 removedliquidity) {
+        // TODO: liquidity owner from global variable instead of msg.sender
         uint256 availableLiquidity = pair.allowance(msg.sender, address(this));
 
         uint256 totalSupply = pair.totalSupply();
@@ -271,9 +267,59 @@ contract Calibrator {
             reserveBaseInvariant
         );
 
-        require(availableLiquidity >= minimumLiquidity, "E1");
+        require(
+            availableLiquidity >= minimumLiquidity,
+            "_calculateRemoveLiquidity: INSUFFICIENT_LIQUIDITY"
+        );
 
         removedliquidity = availableLiquidity - minimumLiquidity;
+    }
+
+    function _validatePrice(
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 targetRatioBase,
+        uint256 targetRatioQuote
+    ) internal pure {
+        // new base ratio with precision to three decimal places
+        uint256 newRatioBase3DP = Math.mulDiv(
+            reserveBase,
+            targetRatioQuote * 1000,
+            reserveQuote
+        );
+
+        uint256 targetRatioBase3DP = targetRatioBase * 1000;
+
+        require(
+            targetRatioBase3DP - 20 <= newRatioBase3DP,
+            "_validatePrice: too low"
+        );
+
+        require(
+            newRatioBase3DP <= targetRatioBase3DP + 20,
+            "_validatePrice: too high"
+        );
+    }
+
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) internal pure returns (uint256 amountOut) {
+        require(amountIn > 0, "getAmountOut: INSUFFICIENT_INPUT_AMOUNT");
+
+        require(
+            reserveIn > 0 && reserveOut > 0,
+            "getAmountOut: INSUFFICIENT_LIQUIDITY"
+        );
+
+        uint256 amountInWithFee = amountIn * 997;
+
+        uint256 numerator = amountInWithFee * reserveOut;
+
+        uint256 denominator = (reserveIn * 1000) + amountInWithFee;
+
+        amountOut = numerator / denominator;
     }
 
     function _calculateSwapToPrice(
@@ -281,16 +327,10 @@ contract Calibrator {
         uint256 reserveQuote,
         uint256 targetRatioBase,
         uint256 targetRatioQuote
-    ) view internal returns (
-        bool baseToQuote,
-        uint256 amountIn,
-        uint256 amountOut
-    ) {
-        baseToQuote = Math.mulDiv(
-            reserveBase,
-            targetRatioQuote,
-            reserveQuote
-        ) < targetRatioBase;
+    ) internal pure returns (bool baseToQuote, uint256 amountIn, uint256 amountOut) {
+        baseToQuote =
+            Math.mulDiv(reserveBase, targetRatioQuote, reserveQuote) <
+            targetRatioBase;
 
         uint256 invariant = reserveBase * reserveQuote;
 
@@ -306,23 +346,20 @@ contract Calibrator {
             baseToQuote ? reserveBase * 1000 : reserveQuote * 1000
         ) / 997;
 
-        require(leftSide > rightSide, "E2");
+        require(leftSide > rightSide, "_calculateSwapToPrice");
 
         amountIn = leftSide - rightSide;
 
         amountOut = baseToQuote
-            ? router.getAmountOut(amountIn, reserveBase, reserveQuote)
-            : router.getAmountOut(amountIn, reserveQuote, reserveBase);
+            ? getAmountOut(amountIn, reserveBase, reserveQuote)
+            : getAmountOut(amountIn, reserveQuote, reserveBase);
     }
 
     function _calculateAddLiquidity(
         uint256 reserveBase,
         uint256 reserveQuote,
         uint256 reserveBaseInvariant
-    ) pure internal returns (
-        uint256 amountBaseAdded,
-        uint256 amountQuoteAdded
-    ) {
+    ) internal pure returns (uint256 addedBase, uint256 addedQuote) {
         uint256 amountBaseDesired = reserveBaseInvariant - reserveBase;
 
         // Library.quote()
@@ -333,15 +370,33 @@ contract Calibrator {
         );
 
         // calculate added tokens
-        uint256 amountQuoteOptimal = Math.mulDiv(amountBaseDesired, reserveQuote, reserveBase);
+        uint256 amountQuoteOptimal = Math.mulDiv(
+            amountBaseDesired,
+            reserveQuote,
+            reserveBase
+        );
+
         if (amountQuoteOptimal <= amountQuoteDesired) {
-            require(amountQuoteOptimal >= 0, '_calculateAddLiquidity: INSUFFICIENT_QUOTE_AMOUNT');
-            (amountBaseAdded, amountQuoteAdded) = (amountBaseDesired, amountQuoteOptimal);
+            require(
+                amountQuoteOptimal >= 0,
+                "_calculateAddLiquidity: INSUFFICIENT_QUOTE_AMOUNT"
+            );
+            (addedBase, addedQuote) = (amountBaseDesired, amountQuoteOptimal);
         } else {
-            uint256 amountBaseOptimal = Math.mulDiv(amountQuoteDesired, reserveBase, reserveQuote);
+            uint256 amountBaseOptimal = Math.mulDiv(
+                amountQuoteDesired,
+                reserveBase,
+                reserveQuote
+            );
+
             assert(amountBaseOptimal <= amountBaseDesired);
-            require(amountBaseOptimal >= 0, '_calculateAddLiquidity: INSUFFICIENT_BASE_AMOUNT');
-            (amountBaseAdded, amountQuoteAdded) = (amountBaseOptimal, amountQuoteDesired);
+
+            require(
+                amountBaseOptimal >= 0,
+                "_calculateAddLiquidity: INSUFFICIENT_BASE_AMOUNT"
+            );
+
+            (addedBase, addedQuote) = (amountBaseOptimal, amountQuoteDesired);
         }
     }
 }
