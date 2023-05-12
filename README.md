@@ -1,8 +1,22 @@
-#+title: Calibrator
+# calibrator
 
-Set desired price in Uniswap V2 pools.
+Pathway protocol contracts. Set desired price in Uniswap V2 pools.
 
-#+begin_src sh
+## Requirements
+
+* Internet
+* Node >= 18.15.0
+* NPM >= 9.5.0
+
+## Quick Start
+
+1. Prepare `.env` file from `.env.example` template
+2. Run `npm i`
+3. Run `npm run compile`
+4. Run `npm test`
+
+## Common
+```console
 # install node modules
 npm i
 
@@ -25,4 +39,4 @@ npm run hardhat scripts/deploy --network gtonTestnet
 npm run hardhat solidity-json
 # choose Standard-Json-Input in explorer verification,
 # upload json from artifacts/solidity-json/contracts/Calibrator.sol.json
-#+end_src
+```
