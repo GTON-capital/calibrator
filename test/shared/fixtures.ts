@@ -235,8 +235,7 @@ export const calibratorFixture: Fixture<CalibratorFixture> = async function(
   ).then((contract) => contract.deploy(
     pair.address,
     tokenBase.address,
-    tokenQuote.address,
-    wallet.address
+    tokenQuote.address
   )) as Calibrator
 
   return {

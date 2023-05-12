@@ -10,17 +10,35 @@ contract Calibrator is Ownable {
     IPair public pair;
     IERC20 public tokenBase;
     IERC20 public tokenQuote;
-    address public vault;
+    address public vault = address(0);
+    uint256 public feeNumerator = 997;
+    uint256 public feeDenominator = 1000;
+    uint256 public precisionNumerator = 20;
+    uint256 public precisionDenominator = 1000;
+    uint256 public minimumBase = 100000;
 
-    constructor(address _pair, address _tokenBase, address _tokenQuote, address _vault) {
+    constructor(address _pair, address _tokenBase, address _tokenQuote) {
         pair = IPair(_pair);
         tokenBase = IERC20(_tokenBase);
         tokenQuote = IERC20(_tokenQuote);
-        vault = _vault;
     }
 
     function setVault(address _vault) external onlyOwner {
         vault = _vault;
+    }
+
+    function setFee(uint256 _feeNumerator, uint256 _feeDenominator) external onlyOwner {
+        feeNumerator = _feeNumerator;
+        feeDenominator = _feeDenominator;
+    }
+
+    function setPrecision(uint256 _precisionNumerator, uint256 _precisionDenominator) external onlyOwner {
+        precisionNumerator = _precisionNumerator;
+        precisionDenominator = _precisionDenominator;
+    }
+
+    function setMinimumBase(uint256 _minimumBase) external onlyOwner {
+        minimumBase = _minimumBase;
     }
 
     function setRatio(
@@ -259,7 +277,7 @@ contract Calibrator is Ownable {
 
         minimumLiquidity = Math.mulDiv(
             totalSupply,
-            100000,
+            minimumBase,
             reserveBaseInvariant
         );
 
@@ -276,23 +294,23 @@ contract Calibrator is Ownable {
         uint256 reserveQuote,
         uint256 targetRatioBase,
         uint256 targetRatioQuote
-    ) internal pure {
-        // base ratio with precision to three decimal places
-        uint256 ratioBase3DP = Math.mulDiv(
+    ) internal view {
+        // base ratio to number of decimal places specified in precisionDenominator
+        uint256 ratioBaseDP = Math.mulDiv(
             reserveBase,
-            targetRatioQuote * 1000,
+            targetRatioQuote * precisionDenominator,
             reserveQuote
         );
 
-        uint256 targetRatioBase3DP = targetRatioBase * 1000;
+        uint256 targetRatioBaseDP = targetRatioBase * precisionDenominator;
 
         require(
-            targetRatioBase3DP - 20 <= ratioBase3DP,
+            targetRatioBaseDP - precisionNumerator <= ratioBaseDP,
             "_validatePrice: too low"
         );
 
         require(
-            ratioBase3DP <= targetRatioBase3DP + 20,
+            ratioBaseDP <= targetRatioBaseDP + precisionNumerator,
             "_validatePrice: too high"
         );
     }
@@ -301,7 +319,7 @@ contract Calibrator is Ownable {
         uint256 amountIn,
         uint256 reserveIn,
         uint256 reserveOut
-    ) internal pure returns (uint256 amountOut) {
+    ) internal view returns (uint256 amountOut) {
         require(amountIn > 0, "_getAmountOut: INSUFFICIENT_INPUT_AMOUNT");
 
         require(
@@ -309,11 +327,11 @@ contract Calibrator is Ownable {
             "_getAmountOut: INSUFFICIENT_LIQUIDITY"
         );
 
-        uint256 amountInWithFee = amountIn * 997;
+        uint256 amountInWithFee = amountIn * feeNumerator;
 
         uint256 numerator = amountInWithFee * reserveOut;
 
-        uint256 denominator = (reserveIn * 1000) + amountInWithFee;
+        uint256 denominator = (reserveIn * feeDenominator) + amountInWithFee;
 
         amountOut = numerator / denominator;
     }
@@ -325,7 +343,7 @@ contract Calibrator is Ownable {
         uint256 targetRatioQuote
     )
         internal
-        pure
+        view
         returns (bool baseToQuote, uint256 amountIn, uint256 amountOut)
     {
         baseToQuote =
@@ -336,15 +354,15 @@ contract Calibrator is Ownable {
 
         uint256 leftSide = Math.sqrt(
             Math.mulDiv(
-                invariant * 1000,
+                invariant * feeDenominator,
                 baseToQuote ? targetRatioBase : targetRatioQuote,
-                (baseToQuote ? targetRatioQuote : targetRatioBase) * 997
+                (baseToQuote ? targetRatioQuote : targetRatioBase) * feeNumerator
             )
         );
 
         uint256 rightSide = (
-            baseToQuote ? reserveBase * 1000 : reserveQuote * 1000
-        ) / 997;
+            baseToQuote ? reserveBase * feeDenominator : reserveQuote * feeDenominator
+        ) / feeNumerator;
 
         require(leftSide > rightSide, "_calculateSwapToPrice");
 

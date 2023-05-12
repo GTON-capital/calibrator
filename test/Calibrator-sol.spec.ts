@@ -42,31 +42,51 @@ describe("Calibrator", () => {
           targetRatioQuote: "10",
           reserveBase: "10000000000000000000",
           reserveQuote: "25053581500282007896",
-          liquidityBalance: "15804004512126338535"
+          liquidityBalance: "15804004512126338535",
+          requiredBase: "0",
+          leftoverBase: "0",
+          requiredQuote: "0",
+          leftoverQuote: "24857331640029796112"
         },
         { targetRatioBase: "5",
           targetRatioQuote: "10",
           reserveBase: "10000000000000000000",
           reserveQuote: "20053688888888888888",
-          liquidityBalance: "14137066666666665664"
+          liquidityBalance: "14137066666666665664",
+          requiredBase: "0",
+          leftoverBase: "0",
+          requiredQuote: "0",
+          leftoverQuote: "4999892611393119008"
         },
         { targetRatioBase: "4",
           targetRatioQuote: "10",
           reserveBase: "10000000000000000000",
           reserveQuote: "24932472823078796466",
-          liquidityBalance: "15760621692828834209"
+          liquidityBalance: "15760621692828834209",
+          requiredBase: "0",
+          leftoverBase: "0",
+          requiredQuote: "4878783934189907578",
+          leftoverQuote: "0"
         },
         { targetRatioBase: "10",
           targetRatioQuote: "8",
           reserveBase: "10000000000000000000",
           reserveQuote: "8013624208304011259",
-          liquidityBalance: "8929373680506684430"
+          liquidityBalance: "8929373680506684430",
+          requiredBase: "0",
+          leftoverBase: "0",
+          requiredQuote: "0",
+          leftoverQuote: "16918848614774785207"
         },
         { targetRatioBase: "1",
           targetRatioQuote: "12",
           reserveBase: "10000000000000000000",
           reserveQuote: "119902567629527739569",
-          liquidityBalance: "34500611340363746514"
+          liquidityBalance: "34500611340363746514",
+          requiredBase: "0",
+          leftoverBase: "0",
+          requiredQuote: "111888943421223728310",
+          leftoverQuote: "0"
         },
     ]
 
@@ -103,7 +123,11 @@ describe("Calibrator", () => {
             targetRatioQuote,
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveQuote.toString(),
-            liquidityBalance: leftoverLiquidity.toString()
+            liquidityBalance: leftoverLiquidity.toString(),
+            requiredBase: requiredBase.toString(),
+            requiredQuote: requiredQuote.toString(),
+            leftoverBase: leftoverBase.toString(),
+            leftoverQuote: leftoverQuote.toString()
         }
     }
 
@@ -113,6 +137,8 @@ describe("Calibrator", () => {
         let liquidityBalance = await pair.balanceOf(wallet.address);
 
         await pair.approve(calibrator.address, liquidityBalance);
+
+        const baseBalance = await tokenBase.balanceOf(wallet.address);
 
         // TODO: calculate a guard for amount of Quote
         const quoteBalance = await tokenQuote.balanceOf(wallet.address);
@@ -124,6 +150,37 @@ describe("Calibrator", () => {
             targetRatioQuote
         );
 
+        const quoteBalanceNew = await tokenQuote.balanceOf(wallet.address);
+        const baseBalanceNew = await tokenBase.balanceOf(wallet.address);
+
+        let requiredQuote;
+        let leftoverQuote;
+
+        if (quoteBalanceNew.gt(quoteBalance)) {
+            requiredQuote = "0";
+            leftoverQuote = quoteBalanceNew.sub(quoteBalance).toString();
+        } else if (quoteBalanceNew.lt(quoteBalance)) {
+            requiredQuote = quoteBalance.sub(quoteBalanceNew).toString();
+            leftoverQuote = "0";
+        } else {
+            requiredQuote = "0";
+            leftoverQuote = "0";
+        }
+
+        let requiredBase;
+        let leftoverBase;
+
+        if (baseBalanceNew.gt(baseBalance)) {
+            requiredBase = "0";
+            leftoverBase = baseBalanceNew.sub(baseBalance).toString();
+        } else if (baseBalanceNew.lt(baseBalance)) {
+            requiredBase = baseBalance.sub(baseBalanceNew).toString();
+            leftoverBase = "0";
+        } else {
+            requiredBase = "0";
+            leftoverBase = "0";
+        }
+
         const [reserveBase, reserveToken] = await pair.getReserves();
 
         liquidityBalance = await pair.balanceOf(wallet.address)
@@ -133,7 +190,11 @@ describe("Calibrator", () => {
             targetRatioQuote,
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveToken.toString(),
-            liquidityBalance: liquidityBalance.toString()
+            liquidityBalance: liquidityBalance.toString(),
+            requiredBase,
+            requiredQuote,
+            leftoverBase,
+            leftoverQuote
         }
     }
 
