@@ -88,6 +88,16 @@ describe("Calibrator", () => {
           requiredQuote: "111888943421223728310",
           leftoverQuote: "0"
         },
+        { targetRatioBase: "16",
+          targetRatioQuote: "100",
+          reserveBase: "10000000000000000000",
+          reserveQuote: "62635465141408174732",
+          liquidityBalance: "24925297872033885093",
+          requiredBase: "0",
+          leftoverBase: "0",
+          requiredQuote: "0",
+          leftoverQuote: "57267102488119564837"
+        },
     ]
 
     async function estimate(

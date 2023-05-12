@@ -11,10 +11,16 @@ contract Calibrator is Ownable {
     IERC20 public tokenBase;
     IERC20 public tokenQuote;
     address public vault = address(0);
+
     uint256 public feeNumerator = 997;
     uint256 public feeDenominator = 1000;
-    uint256 public precisionNumerator = 20;
-    uint256 public precisionDenominator = 1000;
+
+    uint256 public precisionNumerator = 5;
+    uint256 public precisionDenominator = 100;
+
+    uint256 public strengthNumerator = 100;
+    uint256 public strengthDenominator = 1;
+
     uint256 public minimumBase = 100000;
 
     constructor(address _pair, address _tokenBase, address _tokenQuote) {
@@ -27,14 +33,28 @@ contract Calibrator is Ownable {
         vault = _vault;
     }
 
-    function setFee(uint256 _feeNumerator, uint256 _feeDenominator) external onlyOwner {
+    function setFee(
+        uint256 _feeNumerator,
+        uint256 _feeDenominator
+    ) external onlyOwner {
         feeNumerator = _feeNumerator;
         feeDenominator = _feeDenominator;
     }
 
-    function setPrecision(uint256 _precisionNumerator, uint256 _precisionDenominator) external onlyOwner {
+    function setPrecision(
+        uint256 _precisionNumerator,
+        uint256 _precisionDenominator
+    ) external onlyOwner {
         precisionNumerator = _precisionNumerator;
         precisionDenominator = _precisionDenominator;
+    }
+
+    function setStrength(
+        uint256 _strengthNumerator,
+        uint256 _strengthDenominator
+    ) external onlyOwner {
+        strengthNumerator = _strengthNumerator;
+        strengthDenominator = _strengthDenominator;
     }
 
     function setMinimumBase(uint256 _minimumBase) external onlyOwner {
@@ -45,16 +65,24 @@ contract Calibrator is Ownable {
         uint256 targetRatioBase,
         uint256 targetRatioQuote
     ) external onlyOwner {
-        (uint256 reserveBaseInvariant, , ) = pair.getReserves();
+        (uint256 reserveBaseInvariant, uint256 reserveQuoteStart, ) = pair
+            .getReserves();
+
+        _checkStrength(
+            reserveBaseInvariant,
+            reserveQuoteStart,
+            targetRatioBase,
+            targetRatioQuote
+        );
 
         _removeLiquidity(reserveBaseInvariant);
 
-        _swapToPrice(targetRatioBase, targetRatioQuote);
+        _swapToRatio(targetRatioBase, targetRatioQuote);
 
-        // validate price calibration
+        // check ratio calibration
         (uint256 reserveBase, uint256 reserveQuote, ) = pair.getReserves();
 
-        _validatePrice(
+        _checkPrecision(
             reserveBase,
             reserveQuote,
             targetRatioBase,
@@ -75,10 +103,10 @@ contract Calibrator is Ownable {
         (ratioBase, ratioQuote, ) = pair.getReserves();
     }
 
-    // calculate amount of quote tokens needed to set price
-    // amount of quote tokens left over after price change
-    // amount of base tokens left over after price change
-    // amount of liquidity after price change
+    // calculate amount of quote tokens needed to set ratio
+    // amount of quote tokens left over after ratio change
+    // amount of base tokens left over after ratio change
+    // amount of liquidity after ratio change
     function estimate(
         uint256 targetRatioBase,
         uint256 targetRatioQuote
@@ -121,7 +149,7 @@ contract Calibrator is Ownable {
         uint256 amountIn;
         uint256 amountOut;
 
-        (baseToQuote, amountIn, amountOut) = _calculateSwapToPrice(
+        (baseToQuote, amountIn, amountOut) = _calculateSwapToRatio(
             reserveBase,
             reserveQuote,
             targetRatioBase,
@@ -140,7 +168,7 @@ contract Calibrator is Ownable {
             availableBase += amountOut;
         }
 
-        _validatePrice(
+        _checkPrecision(
             reserveBase,
             reserveQuote,
             targetRatioBase,
@@ -195,7 +223,7 @@ contract Calibrator is Ownable {
         pair.burn(address(this));
     }
 
-    function _swapToPrice(
+    function _swapToRatio(
         uint256 targetRatioBase,
         uint256 targetRatioQuote
     ) internal {
@@ -205,7 +233,7 @@ contract Calibrator is Ownable {
             bool baseToQuote,
             uint256 amountIn,
             uint256 amountOut
-        ) = _calculateSwapToPrice(
+        ) = _calculateSwapToRatio(
                 reserveBase,
                 reserveQuote,
                 targetRatioBase,
@@ -289,7 +317,33 @@ contract Calibrator is Ownable {
         removedliquidity = availableLiquidity - minimumLiquidity;
     }
 
-    function _validatePrice(
+    function _checkStrength(
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 targetRatioBase,
+        uint256 targetRatioQuote
+    ) internal view {
+        // base ratio to number of decimal places specified in strengthDenominator
+        uint256 ratioBaseDP = Math.mulDiv(
+            reserveBase,
+            targetRatioQuote * strengthDenominator,
+            reserveQuote
+        );
+
+        uint256 targetRatioBaseDP = targetRatioBase * strengthDenominator;
+
+        uint256 lowerBound = ratioBaseDP > strengthNumerator
+            ? ratioBaseDP - strengthNumerator
+            : 0;
+
+        uint256 upperBound = ratioBaseDP + strengthNumerator;
+
+        require(lowerBound <= targetRatioBaseDP, "_checkStrength: LOWER BOUND");
+
+        require(targetRatioBaseDP <= upperBound, "_checkStrength: UPPER BOUND");
+    }
+
+    function _checkPrecision(
         uint256 reserveBase,
         uint256 reserveQuote,
         uint256 targetRatioBase,
@@ -304,15 +358,15 @@ contract Calibrator is Ownable {
 
         uint256 targetRatioBaseDP = targetRatioBase * precisionDenominator;
 
-        require(
-            targetRatioBaseDP - precisionNumerator <= ratioBaseDP,
-            "_validatePrice: too low"
-        );
+        uint256 lowerBound = targetRatioBaseDP > precisionNumerator
+            ? targetRatioBaseDP - precisionNumerator
+            : 0;
 
-        require(
-            ratioBaseDP <= targetRatioBaseDP + precisionNumerator,
-            "_validatePrice: too high"
-        );
+        uint256 upperBound = targetRatioBaseDP + precisionNumerator;
+
+        require(lowerBound <= ratioBaseDP, "_checkPrecision: LOWER BOUND");
+
+        require(ratioBaseDP <= upperBound, "_checkPrecision: UPPER BOUND");
     }
 
     function _getAmountOut(
@@ -336,7 +390,7 @@ contract Calibrator is Ownable {
         amountOut = numerator / denominator;
     }
 
-    function _calculateSwapToPrice(
+    function _calculateSwapToRatio(
         uint256 reserveBase,
         uint256 reserveQuote,
         uint256 targetRatioBase,
@@ -356,15 +410,21 @@ contract Calibrator is Ownable {
             Math.mulDiv(
                 invariant * feeDenominator,
                 baseToQuote ? targetRatioBase : targetRatioQuote,
-                (baseToQuote ? targetRatioQuote : targetRatioBase) * feeNumerator
+                (baseToQuote ? targetRatioQuote : targetRatioBase) *
+                    feeNumerator
             )
         );
 
         uint256 rightSide = (
-            baseToQuote ? reserveBase * feeDenominator : reserveQuote * feeDenominator
+            baseToQuote
+                ? reserveBase * feeDenominator
+                : reserveQuote * feeDenominator
         ) / feeNumerator;
 
-        require(leftSide > rightSide, "_calculateSwapToPrice");
+        require(
+            leftSide > rightSide,
+            "_calculateSwapToRatio: RATIO EQUALS TARGET"
+        );
 
         amountIn = leftSide - rightSide;
 
@@ -425,7 +485,6 @@ contract Calibrator is Ownable {
                 "_calculateAddLiquidity: INSUFFICIENT_BASE_AMOUNT"
             );
 
-            // TODO: fail if required is over a variable percent of quote balance
             (addedBase, addedQuote) = (amountBaseOptimal, amountQuoteDesired);
         }
     }
