@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -211,7 +211,7 @@ contract Calibrator {
 
         tokenBase.transfer(address(pair), addedBase);
 
-        // TODO: take only missing tokens from sender
+        // TODO: transfer only missing tokens from vault
         tokenQuote.transferFrom(msg.sender, address(pair), addedQuote);
 
         pair.mint(address(this));
@@ -232,7 +232,7 @@ contract Calibrator {
         view
         returns (uint256 minimumLiquidity, uint256 removedliquidity)
     {
-        // TODO: liquidity owner from global variable instead of msg.sender
+        // TODO: vault global variable instead of msg.sender
         uint256 availableLiquidity = pair.allowance(msg.sender, address(this));
 
         uint256 totalSupply = pair.totalSupply();
@@ -277,16 +277,16 @@ contract Calibrator {
         );
     }
 
-    function getAmountOut(
+    function _getAmountOut(
         uint256 amountIn,
         uint256 reserveIn,
         uint256 reserveOut
     ) internal pure returns (uint256 amountOut) {
-        require(amountIn > 0, "getAmountOut: INSUFFICIENT_INPUT_AMOUNT");
+        require(amountIn > 0, "_getAmountOut: INSUFFICIENT_INPUT_AMOUNT");
 
         require(
             reserveIn > 0 && reserveOut > 0,
-            "getAmountOut: INSUFFICIENT_LIQUIDITY"
+            "_getAmountOut: INSUFFICIENT_LIQUIDITY"
         );
 
         uint256 amountInWithFee = amountIn * 997;
@@ -331,8 +331,8 @@ contract Calibrator {
         amountIn = leftSide - rightSide;
 
         amountOut = baseToQuote
-            ? getAmountOut(amountIn, reserveBase, reserveQuote)
-            : getAmountOut(amountIn, reserveQuote, reserveBase);
+            ? _getAmountOut(amountIn, reserveBase, reserveQuote)
+            : _getAmountOut(amountIn, reserveQuote, reserveBase);
     }
 
     function _sortTokens(

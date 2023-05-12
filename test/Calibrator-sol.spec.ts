@@ -3,7 +3,6 @@ import { BigNumber as BN } from "bignumber.js";
 import { BigNumber } from "ethers"
 import { IERC20 } from "../typechain/IERC20"
 import { IPair } from "../typechain/IPair"
-import { IRouter02 } from "../typechain/IRouter02"
 import { Calibrator } from "../typechain/Calibrator"
 import { calibratorFixture } from "./shared/fixtures"
 import { expect } from "./shared/expect"
@@ -20,7 +19,6 @@ describe("Calibrator", () => {
 
     let tokenBase: IERC20
     let tokenQuote: IERC20
-    let router: IRouter02
     let pair: IPair
     let calibrator: Calibrator
 
