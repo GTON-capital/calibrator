@@ -1,0 +1,34 @@
+#+title: Calibrator
+
+Set desired price in Uniswap V2 pools.
+
+#+begin_src sh
+# install node modules
+npm i
+
+# compile contract
+npm run compile
+
+# js scripts require ogs repos with a build/ folder
+# run "npm run compile" in ogs repos
+# create local links to repos
+npm link @gton-capital/ogs-core
+npm link @gton-capital/ogs-periphery
+
+# run tests
+npm run test
+
+# put private key to .env
+# PRIVATE_KEY=0xabc..abc
+
+# deploy pool and Calibrator
+npm run hardhat scripts/deploy --network gtonTestnet
+
+# solidity compiler uses viaIR optimizer
+# this allows to have a lot of variables in the code
+# but makes verification a bit difficult
+# get json metadata
+npm run hardhat solidity-json
+# choose Standard-Json-Input in explorer verification,
+# upload json from artifacts/solidity-json/contracts/Calibrator.sol.json
+#+end_src
