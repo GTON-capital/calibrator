@@ -229,7 +229,6 @@ export const calibratorFixture: Fixture<CalibratorFixture> = async function(
     pair
   } = await uniswapFixture([wallet, other], provider)
 
-
   const calibrator = await ethers.getContractFactory(
     "Calibrator"
   ).then((contract) => contract.deploy(

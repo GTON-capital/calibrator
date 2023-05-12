@@ -26,7 +26,7 @@ describe("Calibrator", () => {
         ;({ tokenBase,
             tokenQuote,
             pair,
-            calibrator} = await loadFixture(calibratorFixture))
+            calibrator } = await loadFixture(calibratorFixture))
     })
 
     interface TestCase {
