@@ -1,7 +1,7 @@
 {
   "name": "@fetsorn/calibrator",
-  "description": "",
-  "license": "",
+  "description": "Calibrate swap ratio of UniswapV2 pools",
+  "license": "GPL-3.0",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "2.2.3",
     "@nomiclabs/hardhat-etherscan": "3.1.7",
@@ -34,8 +34,8 @@
     "test": "hardhat test"
   },
   "dependencies": {
-    "@gton-capital/ogs-core": "github:gton-capital/ogs-core#33cd466",
-    "@gton-capital/ogs-periphery": "github:gton-capital/ogs-periphery#903060c8",
+    "@gton/ogs-core": "^1.0.1",
+    "@gton/ogs-periphery": "^1.1.0-beta.1",
     "@openzeppelin/contracts": "^4.8.3",
     "@xyrusworx/hardhat-solidity-json": "^1.0.2",
     "bignumber.js": "^9.1.1"

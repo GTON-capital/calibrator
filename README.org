@@ -9,12 +9,6 @@ npm i
 # compile contract
 npm run compile
 
-# js scripts require ogs repos with a build/ folder
-# run "npm run compile" in ogs repos
-# create local links to repos
-npm link @gton-capital/ogs-core
-npm link @gton-capital/ogs-periphery
-
 # run tests
 npm run test
 

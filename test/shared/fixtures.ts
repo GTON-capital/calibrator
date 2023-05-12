@@ -12,19 +12,19 @@ import {
 import {
   abi as FactoryABI,
   bytecode as FactoryBytecode
-} from "@gton-capital/ogs-core/build/OGXFactory.json"
+} from "@gton/ogs-core/build/OGXFactory.json"
 import {
   abi as PairABI,
   bytecode as PairBytecode
-} from "@gton-capital/ogs-core/build/OGXPair.json"
+} from "@gton/ogs-core/build/OGXPair.json"
 import {
   abi as WETH9ABI,
   bytecode as WETH9Bytecode
-} from "@gton-capital/ogs-periphery/build/WETH9.json"
+} from "@gton/ogs-periphery/build/WETH9.json"
 import {
   abi as Router02ABI,
   bytecode as Router02Bytecode
-} from "@gton-capital/ogs-periphery/build/OGXRouter02.json"
+} from "@gton/ogs-periphery/build/OGXRouter02.json"
 
 import { expandTo18Decimals } from "./utilities"
 

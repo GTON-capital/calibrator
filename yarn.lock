@@ -861,15 +861,17 @@
   optionalDependencies:
     "@trufflesuite/bigint-buffer" "1.1.9"
 
-"@gton-capital/ogs-core@github:gton-capital/ogs-core#33cd466", "@gton-capital/ogs-core@gton-capital/ogs-core#33cd466":
+"@gton/ogs-core@^1.0.1":
   version "1.0.1"
-  resolved "https://codeload.github.com/gton-capital/ogs-core/tar.gz/33cd466a05a93153c668976b816293c4d18aaed1"
+  resolved "https://registry.yarnpkg.com/@gton/ogs-core/-/ogs-core-1.0.1.tgz#6d63a167df8876254121bdbea031c21e21a3bfb8"
+  integrity sha512-QT6jXUyIZlOGyGPkYq4lpwWuZnJkJ85XkCc9JDMOqQSCXe8LLBu4MnOWoRLIclDJrIGW3MsVQTzJTnM7HBgNkg==
 
-"@gton-capital/ogs-periphery@github:gton-capital/ogs-periphery#903060c8":
-  version "1.1.0-beta.0"
-  resolved "https://codeload.github.com/gton-capital/ogs-periphery/tar.gz/903060c83ab1491ec0bcc5978ef2f3e1f15ede98"
+"@gton/ogs-periphery@^1.1.0-beta.1":
+  version "1.1.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@gton/ogs-periphery/-/ogs-periphery-1.1.0-beta.1.tgz#7f1afd9ee939f68ef08c3e0dd47e4b297aab7b8c"
+  integrity sha512-Omj4LarkBjrUJajal8pdSWU+DagrhZIE4FK8i/Hv8ZG1HfDRrau8LuqiLVsqSr51KIYVuRuTkVsu3eF2AmZtew==
   dependencies:
-    "@gton-capital/ogs-core" gton-capital/ogs-core#33cd466
+    "@gton/ogs-core" "^1.0.1"
     "@uniswap/lib" "4.0.1-alpha"
 
 "@istanbuljs/load-nyc-config@^1.0.0":
@@ -1436,9 +1438,9 @@
   integrity sha512-ysT8mhdixWK6Hw3i1V2AeRqZ5WfXg1G43mqoYlM2nc6388Fq5jcXyr5mRsqViLx/GJYdoL0bfXD8nmF+Zn/Iow==
 
 "@tsconfig/node16@^1.0.2":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.3.tgz#472eaab5f15c1ffdd7f8628bd4c4f753995ec79e"
-  integrity sha512-yOlFc+7UtL/89t2ZhjPvvB/DeAr3r+Dq58IgzsFkOAvVC6NMJXmCGjbptdXdR9qsX7pKcTL+s87FtYREi2dEEQ==
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.4.tgz#0b92dcc0cc1c81f6f306a381f28e31b1a56536e9"
+  integrity sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==
 
 "@typechain/ethers-v5@^10.0.0", "@typechain/ethers-v5@^10.2.1":
   version "10.2.1"
@@ -1558,20 +1560,15 @@
     "@types/node" "*"
     form-data "^3.0.0"
 
-"@types/node@*":
-  version "20.1.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.1.2.tgz#8fd63447e3f99aba6c3168fd2ec4580d5b97886f"
-  integrity sha512-CTO/wa8x+rZU626cL2BlbCDzydgnFNgc19h4YvizpTO88MFQxab8wqisxaofQJ/9bLGugRdWIuX/TbIs6VVF6g==
+"@types/node@*", "@types/node@^20.1.3":
+  version "20.1.3"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.1.3.tgz#bc8e7cd8065a5fc355a3a191a68db8019c58bc00"
+  integrity sha512-NP2yfZpgmf2eDRPmgGq+fjGjSwFgYbihA8/gK+ey23qT9RkxsgNTZvGOEpXgzIGqesTYkElELLgtKoMQTys5vA==
 
 "@types/node@11.11.6":
   version "11.11.6"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-11.11.6.tgz#df929d1bb2eee5afdda598a41930fe50b43eaa6a"
   integrity sha512-Exw4yUWMBXM3X+8oqzJNRqZSwUAaS4+7NdvHqQuFi/d+synz++xmX3QIf+BFqneW8N31R8Ky+sikfZUXq07ggQ==
-
-"@types/node@^20.1.3":
-  version "20.1.3"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.1.3.tgz#bc8e7cd8065a5fc355a3a191a68db8019c58bc00"
-  integrity sha512-NP2yfZpgmf2eDRPmgGq+fjGjSwFgYbihA8/gK+ey23qT9RkxsgNTZvGOEpXgzIGqesTYkElELLgtKoMQTys5vA==
 
 "@types/pbkdf2@^3.0.0":
   version "3.1.0"
@@ -2500,9 +2497,9 @@ ecc-jsbn@~0.1.1:
     safer-buffer "^2.1.0"
 
 electron-to-chromium@^1.4.284:
-  version "1.4.391"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.391.tgz#197994210792e29e39baf3ce807df42f66e9b5f8"
-  integrity sha512-GqydVV1+kUWY5qlEzaw34/hyWTApuQrHiGrcGA2Kk/56nEK44i+YUW45VH43JuZT0Oo7uY8aVtpPhBBZXEWtSA==
+  version "1.4.392"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.392.tgz#57ec91fa02393ab32e46df6925ef309642a44680"
+  integrity sha512-TXQOMW9tnhIms3jGy/lJctLjICOgyueZFJ1KUtm6DTQ+QpxX3p7ZBwB6syuZ9KBuT5S4XX7bgY1ECPgfxKUdOg==
 
 elliptic@6.5.4, elliptic@^6.5.2, elliptic@^6.5.4:
   version "6.5.4"

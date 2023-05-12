@@ -7,11 +7,11 @@ import { Calibrator } from "../../typechain/Calibrator"
 import {
     abi as FactoryABI,
     bytecode as FactoryBytecode
-} from "@gton-capital/ogs-core/build/OGXFactory.json"
+} from "@gton/ogs-core/build/OGXFactory.json"
 import {
     abi as PairABI,
     bytecode as PairBytecode
-} from "@gton-capital/ogs-core/build/OGXPair.json"
+} from "@gton/ogs-core/build/OGXPair.json"
 import {
     abi as ERC20ABI,
     bytecode as ERC20Bytecode
