@@ -2,24 +2,31 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IPair.sol";
 
-contract Calibrator {
+contract Calibrator is Ownable {
     IPair public pair;
     IERC20 public tokenBase;
     IERC20 public tokenQuote;
+    address public vault;
 
-    constructor(address _pair, address _tokenBase, address _tokenQuote) {
+    constructor(address _pair, address _tokenBase, address _tokenQuote, address _vault) {
         pair = IPair(_pair);
         tokenBase = IERC20(_tokenBase);
         tokenQuote = IERC20(_tokenQuote);
+        vault = _vault;
+    }
+
+    function setVault(address _vault) external onlyOwner {
+        vault = _vault;
     }
 
     function setRatio(
         uint256 targetRatioBase,
         uint256 targetRatioQuote
-    ) external {
+    ) external onlyOwner {
         (uint256 reserveBaseInvariant, , ) = pair.getReserves();
 
         _removeLiquidity(reserveBaseInvariant);
@@ -128,7 +135,6 @@ contract Calibrator {
             reserveBaseInvariant
         );
 
-        // TODO: fail if required is over a variable percent of quote balance
         if (availableBase < addedBase) {
             leftoverBase = 0;
             requiredBase = addedBase - availableBase;
@@ -157,12 +163,16 @@ contract Calibrator {
         leftoverLiquidity = minimumLiquidity + mintedLiquidity;
     }
 
+    function _getVault() internal view returns (address) {
+        return vault != address(0) ? vault : msg.sender;
+    }
+
     function _removeLiquidity(uint256 reserveBaseInvariant) internal {
         (, uint256 removedLiquidity) = _calculateRemoveLiquidity(
             reserveBaseInvariant
         );
 
-        pair.transferFrom(msg.sender, address(pair), removedLiquidity);
+        pair.transferFrom(_getVault(), address(pair), removedLiquidity);
 
         pair.burn(address(this));
     }
@@ -211,18 +221,29 @@ contract Calibrator {
 
         tokenBase.transfer(address(pair), addedBase);
 
-        // TODO: transfer only missing tokens from vault
-        tokenQuote.transferFrom(msg.sender, address(pair), addedQuote);
+        uint256 availableQuote = tokenQuote.balanceOf(address(this));
+
+        if (addedQuote > availableQuote) {
+            tokenQuote.transfer(address(pair), availableQuote);
+
+            tokenQuote.transferFrom(
+                _getVault(),
+                address(pair),
+                addedQuote - availableQuote
+            );
+        } else {
+            tokenQuote.transfer(address(pair), addedQuote);
+        }
 
         pair.mint(address(this));
     }
 
     function _transfer() internal {
-        pair.transfer(msg.sender, pair.balanceOf(address(this)));
+        pair.transfer(_getVault(), pair.balanceOf(address(this)));
 
-        tokenBase.transfer(msg.sender, tokenBase.balanceOf(address(this)));
+        tokenBase.transfer(_getVault(), tokenBase.balanceOf(address(this)));
 
-        tokenQuote.transfer(msg.sender, tokenQuote.balanceOf(address(this)));
+        tokenQuote.transfer(_getVault(), tokenQuote.balanceOf(address(this)));
     }
 
     function _calculateRemoveLiquidity(
@@ -232,8 +253,7 @@ contract Calibrator {
         view
         returns (uint256 minimumLiquidity, uint256 removedliquidity)
     {
-        // TODO: vault global variable instead of msg.sender
-        uint256 availableLiquidity = pair.allowance(msg.sender, address(this));
+        uint256 availableLiquidity = pair.allowance(_getVault(), address(this));
 
         uint256 totalSupply = pair.totalSupply();
 
@@ -387,6 +407,7 @@ contract Calibrator {
                 "_calculateAddLiquidity: INSUFFICIENT_BASE_AMOUNT"
             );
 
+            // TODO: fail if required is over a variable percent of quote balance
             (addedBase, addedQuote) = (amountBaseOptimal, amountQuoteDesired);
         }
     }
