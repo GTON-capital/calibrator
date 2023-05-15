@@ -1,9 +1,4 @@
 import { ethers } from "hardhat";
-import { IERC20 } from "../../typechain/IERC20"
-import { IPair } from "../../typechain/IPair"
-import { IFactory } from "../../typechain/IFactory"
-import { Calibrator } from "../../typechain/Calibrator"
-import { BigNumber } from "ethers"
 import {
     abi as FactoryABI,
     bytecode as FactoryBytecode
@@ -16,6 +11,8 @@ import {
     abi as ERC20ABI,
     bytecode as ERC20Bytecode
 } from "@openzeppelin/contracts/build/contracts/ERC20PresetFixedSupply.json"
+
+import { IERC20, IFactory, IPair } from "~/typechain-types"
 
 import { expandTo18Decimals } from "../test/shared/utilities"
 

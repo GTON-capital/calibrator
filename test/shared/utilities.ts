@@ -1,5 +1,4 @@
-import { ethers } from "hardhat"
-import { BigNumber, Bytes } from "ethers"
+import { BigNumber } from "ethers"
 
 export const MAX_UINT = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 export const ZERO_ADDR = "0x0000000000000000000000000000000000000000"

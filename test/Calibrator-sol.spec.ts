@@ -1,12 +1,9 @@
-import { ethers, waffle } from "hardhat"
-import { BigNumber as BN } from "bignumber.js";
-import { BigNumber } from "ethers"
-import { IERC20 } from "../typechain/IERC20"
-import { IPair } from "../typechain/IPair"
-import { Calibrator } from "../typechain/Calibrator"
+import { waffle } from "hardhat"
+
+import { Calibrator, IERC20, IPair } from "~/typechain-types"
+
 import { calibratorFixture } from "./shared/fixtures"
 import { expect } from "./shared/expect"
-import { expandTo18Decimals } from "./shared/utilities"
 
 describe("Calibrator", () => {
     const [wallet, other] = waffle.provider.getWallets()
@@ -35,6 +32,10 @@ describe("Calibrator", () => {
         reserveBase: string;
         reserveQuote: string;
         liquidityBalance: string;
+        requiredBase: string;
+        leftoverBase: string;
+        requiredQuote: string;
+        leftoverQuote: string;
     }
 
     const testCases = [
@@ -211,8 +212,6 @@ describe("Calibrator", () => {
     describe("#calibrate", async () => {
         it("matches expectations", async () => {
             for (const testCase of testCases) {
-                const { targetRatioBase, targetRatioQuote } = testCase;
-
                 const calibrateResult = await calibrate(testCase);
 
                 expect(calibrateResult).to.deep.equal(testCase);
@@ -223,8 +222,6 @@ describe("Calibrator", () => {
     describe("#estimate", async () => {
         it("matches expectations", async () => {
             for (const testCase of testCases) {
-                const { targetRatioBase, targetRatioQuote } = testCase;
-
                 const estimateResult = await estimate(testCase);
 
                 expect(estimateResult).to.deep.equal(testCase);

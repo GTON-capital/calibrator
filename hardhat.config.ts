@@ -1,10 +1,11 @@
-import "@xyrusworx/hardhat-solidity-json";
-import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
+import "@typechain/hardhat";
+import "@xyrusworx/hardhat-solidity-json";
 import "hardhat-abi-exporter";
 
 import { config } from "dotenv";
+
 config();
 
 const {

@@ -297,7 +297,7 @@ contract Calibrator is Ownable {
     )
         internal
         view
-        returns (uint256 minimumLiquidity, uint256 removedliquidity)
+        returns (uint256 minimumLiquidity, uint256 removedLiquidity)
     {
         uint256 availableLiquidity = pair.allowance(_getVault(), address(this));
 
@@ -314,7 +314,7 @@ contract Calibrator is Ownable {
             "_calculateRemoveLiquidity: INSUFFICIENT_LIQUIDITY"
         );
 
-        removedliquidity = availableLiquidity - minimumLiquidity;
+        removedLiquidity = availableLiquidity - minimumLiquidity;
     }
 
     function _checkStrength(

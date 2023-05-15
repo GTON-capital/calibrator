@@ -1,5 +1,5 @@
 {
-  "name": "@fetsorn/calibrator",
+  "name": "calibrator",
   "description": "Calibrate swap ratio of UniswapV2 pools",
   "license": "GPL-3.0",
   "devDependencies": {
@@ -26,18 +26,18 @@
     "typechain": "^8.1.1",
     "typescript": "^5.0.4"
   },
-  "prettier": {
-    "semi": false
-  },
-  "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test"
-  },
   "dependencies": {
     "@gton/ogs-core": "^1.0.1",
     "@gton/ogs-periphery": "^1.1.0-beta.1",
     "@openzeppelin/contracts": "^4.8.3",
     "@xyrusworx/hardhat-solidity-json": "^1.0.2",
     "bignumber.js": "^9.1.1"
+  },
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test"
+  },
+  "prettier": {
+    "semi": false
   }
 }

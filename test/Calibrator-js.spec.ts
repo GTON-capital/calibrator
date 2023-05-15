@@ -1,12 +1,10 @@
-import { ethers, waffle } from "hardhat"
 import { BigNumber as BN } from "bignumber.js";
-import { BigNumber } from "ethers"
-import { IERC20 } from "../typechain/IERC20"
-import { IPair } from "../typechain/IPair"
-import { IRouter02 } from "../typechain/IRouter02"
-import { uniswapFixture } from "./shared/fixtures"
+import { waffle } from "hardhat"
+
+import { IERC20, IPair, IRouter02 } from "~/typechain-types"
+
 import { expect } from "./shared/expect"
-import { expandTo18Decimals } from "./shared/utilities"
+import { uniswapFixture } from "./shared/fixtures"
 
 describe("Calibrator-js", () => {
     const [wallet, other] = waffle.provider.getWallets()

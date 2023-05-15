@@ -1,10 +1,6 @@
-import { ethers, waffle } from "hardhat"
+import { ethers } from "hardhat"
+import { Fixture } from "ethereum-waffle"
 import { BigNumber } from "ethers"
-import { IERC20 } from "../../typechain/IERC20"
-import { IPair } from "../../typechain/IPair"
-import { IFactory } from "../../typechain/IFactory"
-import { IRouter02 } from "../../typechain/IRouter02"
-import { Calibrator } from "../../typechain/Calibrator"
 import {
   abi as ERC20ABI,
   bytecode as ERC20Bytecode
@@ -26,9 +22,9 @@ import {
   bytecode as Router02Bytecode
 } from "@gton/ogs-periphery/build/OGXRouter02.json"
 
-import { expandTo18Decimals } from "./utilities"
+import { Calibrator, IERC20, IFactory, IPair, IRouter02 } from "~/typechain-types"
 
-import { Fixture } from "ethereum-waffle"
+import { expandTo18Decimals } from "./utilities"
 
 interface TokensFixture {
   tokenBase: IERC20
