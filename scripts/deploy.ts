@@ -64,23 +64,14 @@ async function main() {
         tokenQuote.address
     ));
 
-    let liquidityBase = expandTo18Decimals(10)
-
-    let liquidityQuote = expandTo18Decimals(50)
-
-    await tokenBase.transfer(pair.address, liquidityBase)
-
-    await tokenQuote.transfer(pair.address, liquidityQuote)
-
-    await pair.mint(wallet.address);
-
-    const liquidity = pair.balanceOf(wallet.address);
-
-    await tokenQuote.approve(calibrator.address, liquidityQuote);
-
-    await pair.approve(calibrator.address, liquidity);
-
-    await calibrator.setRatio(10, 40);
+    console.log({
+        wallet: wallet.address,
+        base: tokenBase.address,
+        quote: tokenQuote.address,
+        factory: factory.address,
+        pair: pair.address,
+        calibrator: calibrator.address
+    })
 }
 
 main().catch((error) => {

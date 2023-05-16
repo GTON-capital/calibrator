@@ -37,7 +37,6 @@ describe("Calibrator", () => {
 
         await pair.approve(calibrator.address, liquidityBalance);
 
-        // TODO: calculate a guard for amount of Quote
         const quoteBalance = await tokenQuote.balanceOf(wallet.address);
 
         await tokenQuote.approve(calibrator.address, quoteBalance);
