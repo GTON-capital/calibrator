@@ -1,9 +1,11 @@
+import { BigNumber as BN } from "bignumber.js";
 import { waffle } from "hardhat"
 
 import { Calibrator, IERC20, IPair } from "~/typechain-types"
 
 import { calibratorFixture } from "./shared/fixtures"
 import { expect } from "./shared/expect"
+import { TestCase, simpleCases, realCases } from "./cases"
 
 describe("Calibrator", () => {
     const [wallet, other] = waffle.provider.getWallets()
@@ -25,81 +27,6 @@ describe("Calibrator", () => {
             pair,
             calibrator } = await loadFixture(calibratorFixture))
     })
-
-    interface TestCase {
-        targetRatioBase: string;
-        targetRatioQuote: string;
-        reserveBase: string;
-        reserveQuote: string;
-        liquidityBalance: string;
-        requiredBase: string;
-        leftoverBase: string;
-        requiredQuote: string;
-        leftoverQuote: string;
-    }
-
-    const testCases = [
-        { targetRatioBase: "4",
-          targetRatioQuote: "10",
-          reserveBase: "10000000000000000000",
-          reserveQuote: "25053581500282007896",
-          liquidityBalance: "15804004512126338535",
-          requiredBase: "0",
-          leftoverBase: "0",
-          requiredQuote: "0",
-          leftoverQuote: "24857331640029796112"
-        },
-        { targetRatioBase: "5",
-          targetRatioQuote: "10",
-          reserveBase: "10000000000000000000",
-          reserveQuote: "20053688888888888888",
-          liquidityBalance: "14137066666666665664",
-          requiredBase: "0",
-          leftoverBase: "0",
-          requiredQuote: "0",
-          leftoverQuote: "4999892611393119008"
-        },
-        { targetRatioBase: "4",
-          targetRatioQuote: "10",
-          reserveBase: "10000000000000000000",
-          reserveQuote: "24932472823078796466",
-          liquidityBalance: "15760621692828834209",
-          requiredBase: "0",
-          leftoverBase: "0",
-          requiredQuote: "4878783934189907578",
-          leftoverQuote: "0"
-        },
-        { targetRatioBase: "10",
-          targetRatioQuote: "8",
-          reserveBase: "10000000000000000000",
-          reserveQuote: "8013624208304011259",
-          liquidityBalance: "8929373680506684430",
-          requiredBase: "0",
-          leftoverBase: "0",
-          requiredQuote: "0",
-          leftoverQuote: "16918848614774785207"
-        },
-        { targetRatioBase: "1",
-          targetRatioQuote: "12",
-          reserveBase: "10000000000000000000",
-          reserveQuote: "119902567629527739569",
-          liquidityBalance: "34500611340363746514",
-          requiredBase: "0",
-          leftoverBase: "0",
-          requiredQuote: "111888943421223728310",
-          leftoverQuote: "0"
-        },
-        { targetRatioBase: "16",
-          targetRatioQuote: "100",
-          reserveBase: "10000000000000000000",
-          reserveQuote: "62635465141408174732",
-          liquidityBalance: "24925297872033885093",
-          requiredBase: "0",
-          leftoverBase: "0",
-          requiredQuote: "0",
-          leftoverQuote: "57267102488119564837"
-        },
-    ]
 
     async function estimate(
         testCase: TestCase
@@ -132,13 +59,15 @@ describe("Calibrator", () => {
         return {
             targetRatioBase,
             targetRatioQuote,
+            targetRatio: (new BN(targetRatioQuote)).div(new BN(targetRatioBase)).toString(),
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveQuote.toString(),
             liquidityBalance: leftoverLiquidity.toString(),
             requiredBase: requiredBase.toString(),
             requiredQuote: requiredQuote.toString(),
             leftoverBase: leftoverBase.toString(),
-            leftoverQuote: leftoverQuote.toString()
+            leftoverQuote: leftoverQuote.toString(),
+            outcomeRatio: (new BN(reserveQuote.toString())).div(new BN(reserveBase.toString())).toString()
         }
     }
 
@@ -151,7 +80,6 @@ describe("Calibrator", () => {
 
         const baseBalance = await tokenBase.balanceOf(wallet.address);
 
-        // TODO: calculate a guard for amount of Quote
         const quoteBalance = await tokenQuote.balanceOf(wallet.address);
 
         await tokenQuote.approve(calibrator.address, quoteBalance);
@@ -192,26 +120,28 @@ describe("Calibrator", () => {
             leftoverBase = "0";
         }
 
-        const [reserveBase, reserveToken] = await pair.getReserves();
+        const [reserveBase, reserveQuote] = await pair.getReserves();
 
         liquidityBalance = await pair.balanceOf(wallet.address)
 
         return {
             targetRatioBase,
             targetRatioQuote,
+            targetRatio: (new BN(targetRatioQuote)).div(new BN(targetRatioBase)).toString(),
             reserveBase: reserveBase.toString(),
-            reserveQuote: reserveToken.toString(),
+            reserveQuote: reserveQuote.toString(),
             liquidityBalance: liquidityBalance.toString(),
             requiredBase,
             requiredQuote,
             leftoverBase,
-            leftoverQuote
+            leftoverQuote,
+            outcomeRatio: (new BN(reserveQuote.toString())).div(new BN(reserveBase.toString())).toString()
         }
     }
 
-    describe("#calibrate", async () => {
+    describe("#calibrate - simple", async () => {
         it("matches expectations", async () => {
-            for (const testCase of testCases) {
+            for (const testCase of simpleCases) {
                 const calibrateResult = await calibrate(testCase);
 
                 expect(calibrateResult).to.deep.equal(testCase);
@@ -219,9 +149,31 @@ describe("Calibrator", () => {
         })
     })
 
-    describe("#estimate", async () => {
+    describe("#estimate - simple", async () => {
         it("matches expectations", async () => {
-            for (const testCase of testCases) {
+            for (const testCase of simpleCases) {
+                const estimateResult = await estimate(testCase);
+
+                expect(estimateResult).to.deep.equal(testCase);
+
+                await calibrate(testCase);
+            }
+        })
+    })
+
+    describe("#calibrate - real", async () => {
+        it("matches expectations", async () => {
+            for (const testCase of realCases) {
+                const calibrateResult = await calibrate(testCase);
+
+                expect(calibrateResult).to.deep.equal(testCase);
+            }
+        })
+    })
+
+    describe("#estimate - real", async () => {
+        it("matches expectations", async () => {
+            for (const testCase of realCases) {
                 const estimateResult = await estimate(testCase);
 
                 expect(estimateResult).to.deep.equal(testCase);

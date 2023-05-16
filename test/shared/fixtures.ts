@@ -44,14 +44,14 @@ export const tokensFixture: Fixture<TokensFixture> = async function(
   const tokenBase = (await tokenFactory.deploy(
     "Base",
     "BASE",
-    BigNumber.from(2).pow(255),
+    expandTo18Decimals(1000000),
     wallet.address
   )) as IERC20
 
   const tokenQuote = (await tokenFactory.deploy(
     "Quote",
     "QUOT",
-    BigNumber.from(2).pow(255),
+    expandTo18Decimals(1000000),
     wallet.address
   )) as IERC20
 
@@ -109,9 +109,9 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
   let timestamp = block.timestamp
 
   // `wallet` account adds liquidity
-  let liquidityBase = expandTo18Decimals(10)
+  let liquidityBase = BigNumber.from("518159171586236237881");
 
-  let liquidityQuote = expandTo18Decimals(50)
+  let liquidityQuote = BigNumber.from("416532198152771088894342");
 
   await tokenBase.approve(router.address, liquidityBase)
 
@@ -129,9 +129,9 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
   )
 
   // `other` account adds liquidity
-  const liquidityBaseOther = BigNumber.from(1)
+  const liquidityBaseOther = BigNumber.from(518000)
 
-  const liquidityQuoteOther = BigNumber.from(5)
+  const liquidityQuoteOther = BigNumber.from(416000)
 
   await tokenBase.transfer(other.address, liquidityBaseOther)
 
@@ -152,7 +152,7 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
       tokenQuote.address,
       liquidityBaseOther,
       liquidityQuoteOther,
-      liquidityBaseOther,
+      0,
       0,
       other.address,
       timestamp + 3600

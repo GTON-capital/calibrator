@@ -116,7 +116,7 @@ describe("Calibrator-js", () => {
         const amountBaseDesired = reserveBaseInvariant.minus(reserveBaseAfter);
 
         // Library.quote()
-        const amountQuoteDesired = amountBaseDesired.times(reserveQuoteAfter).div(reserveBaseAfter).integerValue();
+        const amountQuoteDesired = amountBaseDesired.times(reserveQuoteAfter).div(reserveBaseAfter).integerValue().toFixed();
 
         await tokenBase.approve(router.address, amountBaseDesired.toString());
 
@@ -145,33 +145,33 @@ describe("Calibrator-js", () => {
     const testCases = [
         { targetRatioBase: 4,
           targetRatioQuote: 10,
-          reserveBase: "10000000000000000000",
-          reserveQuote: "25053193364400984200",
-          liquidityBalance: "15803893091560267185"
+          reserveBase: "518159171586236237881",
+          reserveQuote: "1295615469025634442369",
+          liquidityBalance: "817641044002851015615"
         },
         { targetRatioBase: 5,
           targetRatioQuote: 10,
-          reserveBase: "10000000000000000000",
-          reserveQuote: "20053867624313321125",
-          liquidityBalance: "14137140215826058127"
+          reserveBase: "518159171586236237881",
+          reserveQuote: "1039108320628187616874",
+          liquidityBalance: "732126383632480773524"
         },
         { targetRatioBase: 4,
           targetRatioQuote: 10,
-          reserveBase: "10000000000000000000",
-          reserveQuote: "24932583523368831226",
-          liquidityBalance: "15760732393118868969"
+          reserveBase: "518159171586236237881",
+          reserveQuote: "1291908449006796113524",
+          liquidityBalance: "816210684072656639148"
         },
         { targetRatioBase: 10,
           targetRatioQuote: 8,
-          reserveBase: "10000000000000000000",
-          reserveQuote: "8013680506685432793",
-          liquidityBalance: "8929429978888105964"
+          reserveBase: "518159171586236237881",
+          reserveQuote: "415236559090256431065",
+          liquidityBalance: "462433455516845328998"
         },
         { targetRatioBase: 1,
           targetRatioQuote: 12,
-          reserveBase: "10000000000000000000",
-          reserveQuote: "119903331804982423964",
-          liquidityBalance: "34500993428091088712"
+          reserveBase: "518159171586236237881",
+          reserveQuote: "6213004732579741960070",
+          liquidityBalance: "1786748128884062178228"
         },
     ]
 
