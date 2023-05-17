@@ -16,11 +16,11 @@ import {
 
 import { IERC20, IFactory, IPair } from "~/typechain-types"
 
-// Note: simTSLA
-const BASE_TOTAL_LIQUIDITY = BigNumber.from('1000000000000000000000000');
-
 // Note: OGXT
-const QUOTE_TOTAL_LIQUIDITY = BigNumber.from('6003000200000000000000000');
+const BASE_TOTAL_LIQUIDITY = BigNumber.from('6003000200000000000000000');
+
+// Note: simTSLA
+const QUOTE_TOTAL_LIQUIDITY = BigNumber.from('1000000000000000000000000');
 
 async function main() {
     const [wallet] = await ethers.getSigners()
@@ -68,12 +68,14 @@ async function main() {
         tokenBase.address,
         tokenQuote.address
     ));
-    
-    // Note: simTSLA
-    const startingReserveBase = BigNumber.from("1000002480398709503374");
-    
+
+    await calibrator.setMinimumBase(100000000000000)
+
     // Note: OGXT
-    const startingReserveQuote = BigNumber.from("2474195218611459158903569");
+    const startingReserveBase = BigNumber.from("2474195218611459158903569");
+
+    // Note: simTSLA
+    const startingReserveQuote = BigNumber.from("1000002480398709503374");
 
     await tokenBase.transfer(pair.address, startingReserveBase);
 
@@ -106,6 +108,28 @@ async function main() {
         169.05,
     ];
 
+    const ogxtRate = 0.0674206;
+
+    function tslaRate(reserveBase, reserveQuote) {
+        const ogxtToTsla = (new BN(reserveBase.toString())).div(new BN(reserveQuote.toString()))
+
+        const tslaToUsd = ogxtToTsla.times(new BN(ogxtRate))
+
+        return tslaToUsd.toString()
+    }
+
+    async function getReserves() {
+        const [reserve0, reserve1] = await pair.getReserves();
+
+        const token0 = await pair.token0();
+
+        const [reserveBase, reserveQuote] = tokenBase.address === token0
+            ? [reserve0, reserve1]
+            : [reserve1, reserve0];
+
+        return [reserveBase, reserveQuote]
+    }
+
     for (let i = 0; i < testCasesUSD.length; i++) {
         const testCase = testCasesUSD[i];
 
@@ -117,37 +141,34 @@ async function main() {
         
         await tokenQuote.approve(calibrator.address, quoteBalance);
 
-        
-        const [reserveBaseBefore, reserveQuoteBefore] = await pair.getReserves();
-        
-        const prevPrice = (new BN(reserveQuoteBefore.toString())).div(new BN(reserveBaseBefore.toString())).toString();
+        const [reserveBaseBefore, reserveQuoteBefore] = await getReserves();
 
         console.log(`\n\nCalibrator - Test ${i + 1} (${testCase}):`);
         console.log({
-            test: `Before price - ${prevPrice}`,
-            liquidityBalanceBefore: utils.formatEther(liquidityBalanceBefore),
-            reserveBaseBefore: utils.formatEther(reserveBaseBefore),
-            reserveQuoteBefore: utils.formatEther(reserveQuoteBefore),
-            ratioBefore: prevPrice,
+            test: `Before price - ${testCase}`,
+            liquidity: utils.formatEther(liquidityBalanceBefore),
+            reserveBase: utils.formatEther(reserveBaseBefore),
+            reserveQuote: utils.formatEther(reserveQuoteBefore),
+            ratio: tslaRate(reserveBaseBefore, reserveQuoteBefore)
         });
 
         
         await calibrator.setRatio(
-          "100",
-          new BN(testCase).times(100).toString(),
+            (new BN(testCase)).div(new BN(ogxtRate)).times(1000).integerValue().toString(),
+            "1000"
         );
     
     
         const liquidityBalanceAfter = await pair.balanceOf(wallet.address);
         
-        const [reserveBaseAfter, reserveQuoteAfter] = await pair.getReserves();
+        const [reserveBaseAfter, reserveQuoteAfter] = await getReserves();
 
         console.log({
             test: `After price - ${testCase}`,
-            liquidityBalanceAfter: utils.formatEther(liquidityBalanceAfter),
-            reserveBaseAfter: utils.formatEther(reserveBaseAfter),
-            reserveQuoteAfter: utils.formatEther(reserveQuoteAfter),
-            ratioAfter: (new BN(reserveQuoteAfter.toString())).div(new BN(reserveBaseAfter.toString())).toString()
+            liquidity: utils.formatEther(liquidityBalanceAfter),
+            reserveBase: utils.formatEther(reserveBaseAfter),
+            reserveQuote: utils.formatEther(reserveQuoteAfter),
+            ratio: tslaRate(reserveBaseAfter, reserveQuoteAfter)
         });
     }
 }

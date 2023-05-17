@@ -11,6 +11,7 @@ contract Calibrator is Ownable {
     IERC20 public tokenBase;
     IERC20 public tokenQuote;
     address public vault = address(0);
+    string public constant VERSION = "0.0.1";
 
     uint256 public feeNumerator = 997;
     uint256 public feeDenominator = 1000;
@@ -54,12 +55,11 @@ contract Calibrator is Ownable {
         uint256 targetRatioBase,
         uint256 targetRatioQuote
     ) external onlyOwner {
-        (uint256 reserveBaseInvariant, uint256 reserveQuoteStart, ) = pair
-            .getReserves();
+        (uint256 reserveBaseInvariant, ) = getRatio();
 
         _removeLiquidity(reserveBaseInvariant);
 
-        (uint256 reserveBase, uint256 reserveQuote, ) = pair.getReserves();
+        (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
         while (
             !_checkPrecision(
@@ -71,7 +71,7 @@ contract Calibrator is Ownable {
         ) {
             _swapToRatio(targetRatioBase, targetRatioQuote);
 
-            (reserveBase, reserveQuote, ) = pair.getReserves();
+            (reserveBase, reserveQuote) = getRatio();
         }
 
         _addLiquidity(reserveBaseInvariant);
@@ -81,11 +81,20 @@ contract Calibrator is Ownable {
 
     // retrieve current pool ratio
     function getRatio()
-        external
+        public
         view
         returns (uint256 ratioBase, uint256 ratioQuote)
     {
-        (ratioBase, ratioQuote, ) = pair.getReserves();
+        (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
+
+        (address token0, ) = _sortTokens(
+            address(tokenBase),
+            address(tokenQuote)
+        );
+
+        (ratioBase, ratioQuote) = address(tokenBase) == token0
+            ? (reserve0, reserve1)
+            : (reserve1, reserve0);
     }
 
     // calculate amount of quote tokens needed to set ratio
@@ -109,7 +118,7 @@ contract Calibrator is Ownable {
             uint256 reserveQuote
         )
     {
-        (reserveBase, reserveQuote, ) = pair.getReserves();
+        (reserveBase, reserveQuote) = getRatio();
 
         uint256 reserveBaseInvariant = reserveBase;
 
@@ -214,7 +223,7 @@ contract Calibrator is Ownable {
         uint256 targetRatioBase,
         uint256 targetRatioQuote
     ) internal {
-        (uint256 reserveBase, uint256 reserveQuote, ) = pair.getReserves();
+        (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
         (
             bool baseToQuote,
@@ -244,7 +253,7 @@ contract Calibrator is Ownable {
     }
 
     function _addLiquidity(uint256 reserveBaseInvariant) internal {
-        (uint256 reserveBase, uint256 reserveQuote, ) = pair.getReserves();
+        (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
         (uint256 addedBase, uint256 addedQuote) = _calculateAddLiquidity(
             reserveBase,

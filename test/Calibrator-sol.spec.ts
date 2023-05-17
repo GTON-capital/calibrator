@@ -119,7 +119,7 @@ describe("Calibrator", () => {
             leftoverBase = "0";
         }
 
-        const [reserveBase, reserveQuote] = await pair.getReserves();
+        const [reserveBase, reserveQuote] = await calibrator.getRatio();
 
         liquidityBalance = await pair.balanceOf(wallet.address)
 

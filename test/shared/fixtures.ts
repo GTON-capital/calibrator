@@ -176,7 +176,13 @@ export const uniswapFixture: Fixture<UniswapFixture> = async function(
     timestamp + 3600
   );
 
-  const [reserveBase, reserveQuote] = await pair.getReserves();
+  const [reserve0, reserve1] = await pair.getReserves();
+
+  const token0 = await pair.token0();
+
+  const [reserveBase, reserveQuote] = tokenBase.address === token0
+    ? [reserve0, reserve1]
+    : [reserve1, reserve0];
 
   liquidityBase = (liquidityBase).sub(reserveBase);
 
