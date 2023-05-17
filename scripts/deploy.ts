@@ -15,8 +15,6 @@ import {
 
 import { IERC20, IFactory, IPair } from "~/typechain-types"
 
-import { expandTo18Decimals } from "../test/shared/utilities"
-
 async function main() {
     const [wallet] = await ethers.getSigners()
 

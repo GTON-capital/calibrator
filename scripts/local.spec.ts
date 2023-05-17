@@ -16,13 +16,11 @@ import {
 
 import { IERC20, IFactory, IPair } from "~/typechain-types"
 
-import { expandTo18Decimals } from "../test/shared/utilities"
-
 // Note: simTSLA
-const BASE_TOTAL_LIQUIDITY = expandTo18Decimals(1000000);
+const BASE_TOTAL_LIQUIDITY = BigNumber.from('1000000000000000000000000');
 
 // Note: OGXT
-const QUOTE_TOTAL_LIQUIDITY = expandTo18Decimals(1000000);
+const QUOTE_TOTAL_LIQUIDITY = BigNumber.from('6003000200000000000000000');
 
 async function main() {
     const [wallet] = await ethers.getSigners()
@@ -72,10 +70,10 @@ async function main() {
     ));
     
     // Note: simTSLA
-    const startingReserveBase = BigNumber.from("518159171586236237881");
+    const startingReserveBase = BigNumber.from("1000002480398709503374");
     
     // Note: OGXT
-    const startingReserveQuote = BigNumber.from("416532198152771088894342");
+    const startingReserveQuote = BigNumber.from("2474195218611459158903569");
 
     await tokenBase.transfer(pair.address, startingReserveBase);
 
@@ -83,6 +81,7 @@ async function main() {
 
     await pair.mint(wallet.address);
 
+    
     const testCasesUSD = [
         187.04,
         184.31,
@@ -107,41 +106,48 @@ async function main() {
         169.05,
     ];
 
-
     for (let i = 0; i < testCasesUSD.length; i++) {
         const testCase = testCasesUSD[i];
 
-        const liquidityBalance = await pair.balanceOf(wallet.address);
+        const liquidityBalanceBefore = await pair.balanceOf(wallet.address);
 
-        await pair.approve(calibrator.address, liquidityBalance);
+        await pair.approve(calibrator.address, liquidityBalanceBefore);
 
         const quoteBalance = await tokenQuote.balanceOf(wallet.address);
-
+        
         await tokenQuote.approve(calibrator.address, quoteBalance);
 
-        let [reserveBase, reserveQuote] = await pair.getReserves();
+        
+        const [reserveBaseBefore, reserveQuoteBefore] = await pair.getReserves();
+        
+        const prevPrice = (new BN(reserveQuoteBefore.toString())).div(new BN(reserveBaseBefore.toString())).toString();
 
+        console.log(`\n\nCalibrator - Test ${i + 1} (${testCase}):`);
         console.log({
-            test: `${testCase} before`,
-            liquidity: utils.formatEther(liquidityBalance),
-            reserveBase: utils.formatEther(reserveBase),
-            reserveQuote: utils.formatEther(reserveQuote),
-            ratio: (new BN(reserveQuote.toString())).div(new BN(reserveBase.toString())).toString()
+            test: `Before price - ${prevPrice}`,
+            liquidityBalanceBefore: utils.formatEther(liquidityBalanceBefore),
+            reserveBaseBefore: utils.formatEther(reserveBaseBefore),
+            reserveQuoteBefore: utils.formatEther(reserveQuoteBefore),
+            ratioBefore: prevPrice,
         });
 
+        
         await calibrator.setRatio(
           "100",
           new BN(testCase).times(100).toString(),
         );
-
-        [reserveBase, reserveQuote] = await pair.getReserves();
+    
+    
+        const liquidityBalanceAfter = await pair.balanceOf(wallet.address);
+        
+        const [reserveBaseAfter, reserveQuoteAfter] = await pair.getReserves();
 
         console.log({
-            test: `${testCase} after`,
-            liquidity: utils.formatEther(liquidityBalance),
-            reserveBase: utils.formatEther(reserveBase),
-            reserveQuote: utils.formatEther(reserveQuote),
-            ratio: (new BN(reserveQuote.toString())).div(new BN(reserveBase.toString())).toString()
+            test: `After price - ${testCase}`,
+            liquidityBalanceAfter: utils.formatEther(liquidityBalanceAfter),
+            reserveBaseAfter: utils.formatEther(reserveBaseAfter),
+            reserveQuoteAfter: utils.formatEther(reserveQuoteAfter),
+            ratioAfter: (new BN(reserveQuoteAfter.toString())).div(new BN(reserveBaseAfter.toString())).toString()
         });
     }
 }

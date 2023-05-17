@@ -8,14 +8,13 @@ import {
     bytecode as ERC20Bytecode
 } from "@openzeppelin/contracts/build/contracts/ERC20PresetFixedSupply.json"
 
-import { IERC20, IFactory, IPair } from "~/typechain-types"
+import { IERC20, IPair } from "~/typechain-types"
 
 import { expandTo18Decimals } from "../test/shared/utilities"
 
 async function main() {
     const [wallet] = await ethers.getSigners()
 
-    const addressFactory = "0x0000000000000000000000000000000000000000";
     const addressBase = "0x0000000000000000000000000000000000000000";
     const addressQuote = "0x0000000000000000000000000000000000000000";
     const addressPair = "0x0000000000000000000000000000000000000000";
@@ -51,7 +50,7 @@ async function main() {
 
     const liquidityBalance = pair.balanceOf(wallet.address);
 
-    const quoteBalance = quoteToken.balanceOf(wallet.address);
+    const quoteBalance = tokenQuote.balanceOf(wallet.address);
 
     await tokenQuote.approve(calibrator.address, quoteBalance);
 
