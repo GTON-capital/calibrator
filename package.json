@@ -35,6 +35,7 @@
   },
   "scripts": {
     "compile": "hardhat compile",
+    "deploy:gton:testnet": "hardhat run --network gtonTestnet ./scripts/deploy-gton-testnet.ts",
     "test": "hardhat test",
     "test:local:env": "hardhat run --network localhost ./scripts/local.spec.ts"
   },
