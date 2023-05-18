@@ -9,8 +9,8 @@ async function main() {
   
   const calibratorContract = await calibratorFactory.deploy(
     OGXT_SIM_TSLA_POOL_CONTRACT_ADDR,
-    SIM_TSLA_TOKEN_ADDR,
     OGXT_TOKEN_ADDR,
+    SIM_TSLA_TOKEN_ADDR,
   );
   
   console.log('"Calibrator" was deployed with:');
