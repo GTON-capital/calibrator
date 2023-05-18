@@ -159,11 +159,13 @@ contract Calibrator is Ownable {
             );
 
             if (baseToQuote) {
+                require(availableBase > amountIn, "estimate: not enough base for swap");
                 availableBase -= amountIn;
                 reserveBase += amountIn;
                 reserveQuote -= amountOut;
                 availableQuote += amountOut;
             } else {
+                require(availableQuote > amountIn, "estimate: not enough quote for swap");
                 availableQuote -= amountIn;
                 reserveQuote += amountIn;
                 reserveBase -= amountOut;
@@ -238,7 +240,15 @@ contract Calibrator is Ownable {
 
         IERC20 tokenIn = baseToQuote ? tokenBase : tokenQuote;
 
-        tokenIn.transfer(address(pair), amountIn);
+        if (tokenIn.balanceOf(address(this)) < amountIn) {
+            uint256 missingTokenIn = amountIn - tokenIn.balanceOf(address(this));
+
+            tokenIn.transferFrom(_getVault(), address(pair), missingTokenIn);
+
+            tokenIn.transfer(address(pair), tokenIn.balanceOf(address(this)));
+        } else {
+            tokenIn.transfer(address(pair), amountIn);
+        }
 
         (address token0, ) = _sortTokens(
             address(tokenBase),
@@ -295,7 +305,7 @@ contract Calibrator is Ownable {
         view
         returns (uint256 minimumLiquidity, uint256 removedLiquidity)
     {
-        uint256 availableLiquidity = pair.allowance(_getVault(), address(this));
+        uint256 availableLiquidity = pair.balanceOf(_getVault());
 
         uint256 totalSupply = pair.totalSupply();
 

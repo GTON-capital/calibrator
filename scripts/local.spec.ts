@@ -1,6 +1,6 @@
 import { BigNumber as BN } from "bignumber.js";
 import { ethers } from "hardhat";
-import { BigNumber, utils } from "ethers"
+import { BigNumber, utils, constants } from "ethers"
 import {
     abi as FactoryABI,
     bytecode as FactoryBytecode
@@ -23,7 +23,7 @@ const BASE_TOTAL_LIQUIDITY = BigNumber.from('6003000200000000000000000');
 const QUOTE_TOTAL_LIQUIDITY = BigNumber.from('1000000000000000000000000');
 
 async function main() {
-    const [wallet] = await ethers.getSigners()
+    const [wallet, other, vault] = await ethers.getSigners()
 
     const tokenFactory = await ethers.getContractFactory(
         ERC20ABI,
@@ -83,7 +83,22 @@ async function main() {
 
     await pair.mint(wallet.address);
 
-    
+    await pair.connect(vault).transfer(
+        "0x0000000000000000000000000000000000000000",
+        await pair.balanceOf(vault.address))
+
+    await calibrator.setVault(vault.address)
+
+    await pair.transfer(vault.address, await pair.balanceOf(wallet.address));
+
+    await tokenQuote.transfer(vault.address, await tokenQuote.balanceOf(wallet.address));
+
+    await tokenBase.transfer(vault.address, await tokenBase.balanceOf(wallet.address));
+
+    await pair.connect(vault).approve(calibrator.address, constants.MaxUint256);
+
+    await tokenQuote.connect(vault).approve(calibrator.address, constants.MaxUint256);
+
     const testCasesUSD = [
         187.04,
         184.31,
@@ -118,30 +133,18 @@ async function main() {
         return tslaToUsd.toString()
     }
 
-    async function getReserves() {
-        const [reserve0, reserve1] = await pair.getReserves();
-
-        const token0 = await pair.token0();
-
-        const [reserveBase, reserveQuote] = tokenBase.address === token0
-            ? [reserve0, reserve1]
-            : [reserve1, reserve0];
-
-        return [reserveBase, reserveQuote]
-    }
-
     for (let i = 0; i < testCasesUSD.length; i++) {
         const testCase = testCasesUSD[i];
 
-        const liquidityBalanceBefore = await pair.balanceOf(wallet.address);
+        const liquidityBalanceBefore = await pair.balanceOf(vault.address);
 
         await pair.approve(calibrator.address, liquidityBalanceBefore);
 
-        const quoteBalance = await tokenQuote.balanceOf(wallet.address);
+        const quoteBalance = await tokenQuote.balanceOf(vault.address);
         
         await tokenQuote.approve(calibrator.address, quoteBalance);
 
-        const [reserveBaseBefore, reserveQuoteBefore] = await getReserves();
+        const [reserveBaseBefore, reserveQuoteBefore] = await calibrator.getRatio();
 
         console.log(`\n\nCalibrator - Test ${i + 1} (${testCase}):`);
         console.log({
@@ -152,16 +155,14 @@ async function main() {
             ratio: tslaRate(reserveBaseBefore, reserveQuoteBefore)
         });
 
-        
         await calibrator.setRatio(
             (new BN(testCase)).div(new BN(ogxtRate)).times(1000).integerValue().toString(),
             "1000"
         );
-    
-    
-        const liquidityBalanceAfter = await pair.balanceOf(wallet.address);
+
+        const liquidityBalanceAfter = await pair.balanceOf(vault.address);
         
-        const [reserveBaseAfter, reserveQuoteAfter] = await getReserves();
+        const [reserveBaseAfter, reserveQuoteAfter] = await calibrator.getRatio();
 
         console.log({
             test: `After price - ${testCase}`,

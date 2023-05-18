@@ -1,4 +1,5 @@
 import { BigNumber as BN } from "bignumber.js";
+import { constants } from "ethers";
 import { waffle } from "hardhat"
 
 import { Calibrator, IERC20, IPair } from "~/typechain-types"
@@ -8,7 +9,7 @@ import { expect } from "./shared/expect"
 import { TestCase, simpleCases, realCases } from "./cases"
 
 describe("Calibrator", () => {
-    const [wallet, other] = waffle.provider.getWallets()
+    const [wallet, other, vault] = waffle.provider.getWallets()
 
     let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
 
@@ -77,11 +78,11 @@ describe("Calibrator", () => {
 
         await pair.approve(calibrator.address, liquidityBalance);
 
-        const baseBalance = await tokenBase.balanceOf(wallet.address);
+        const baseBalanceOld = await tokenBase.balanceOf(wallet.address);
 
-        const quoteBalance = await tokenQuote.balanceOf(wallet.address);
+        const quoteBalanceOld = await tokenQuote.balanceOf(wallet.address);
 
-        await tokenQuote.approve(calibrator.address, quoteBalance);
+        await tokenQuote.approve(calibrator.address, quoteBalanceOld);
 
         await calibrator.setRatio(
             targetRatioBase,
@@ -94,11 +95,11 @@ describe("Calibrator", () => {
         let requiredQuote;
         let leftoverQuote;
 
-        if (quoteBalanceNew.gt(quoteBalance)) {
+        if (quoteBalanceNew.gt(quoteBalanceOld)) {
             requiredQuote = "0";
-            leftoverQuote = quoteBalanceNew.sub(quoteBalance).toString();
-        } else if (quoteBalanceNew.lt(quoteBalance)) {
-            requiredQuote = quoteBalance.sub(quoteBalanceNew).toString();
+            leftoverQuote = quoteBalanceNew.sub(quoteBalanceOld).toString();
+        } else if (quoteBalanceNew.lt(quoteBalanceOld)) {
+            requiredQuote = quoteBalanceOld.sub(quoteBalanceNew).toString();
             leftoverQuote = "0";
         } else {
             requiredQuote = "0";
@@ -108,11 +109,11 @@ describe("Calibrator", () => {
         let requiredBase;
         let leftoverBase;
 
-        if (baseBalanceNew.gt(baseBalance)) {
+        if (baseBalanceNew.gt(baseBalanceOld)) {
             requiredBase = "0";
-            leftoverBase = baseBalanceNew.sub(baseBalance).toString();
-        } else if (baseBalanceNew.lt(baseBalance)) {
-            requiredBase = baseBalance.sub(baseBalanceNew).toString();
+            leftoverBase = baseBalanceNew.sub(baseBalanceOld).toString();
+        } else if (baseBalanceNew.lt(baseBalanceOld)) {
+            requiredBase = baseBalanceOld.sub(baseBalanceNew).toString();
             leftoverBase = "0";
         } else {
             requiredBase = "0";
@@ -172,6 +173,30 @@ describe("Calibrator", () => {
 
     describe("#estimate - real", async () => {
         it("matches expectations", async () => {
+            for (const testCase of realCases) {
+                const estimateResult = await estimate(testCase);
+
+                expect(estimateResult).to.deep.equal(testCase);
+
+                await calibrate(testCase);
+            }
+        })
+    })
+
+    describe("#estimate - real, vault", async () => {
+        it("matches expectations", async () => {
+            await calibrator.setVault(vault.address)
+
+            await pair.transfer(vault.address, await pair.balanceOf(wallet.address));
+
+            await tokenQuote.transfer(vault.address, await tokenQuote.balanceOf(wallet.address));
+
+            await tokenBase.transfer(vault.address, await tokenBase.balanceOf(wallet.address));
+
+            await pair.connect(vault).approve(calibrator.address, constants.MaxUint256)
+
+            await tokenQuote.connect(vault).approve(calibrator.address, constants.MaxUint256)
+
             for (const testCase of realCases) {
                 const estimateResult = await estimate(testCase);
 
