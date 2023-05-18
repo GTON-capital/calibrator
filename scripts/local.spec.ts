@@ -148,16 +148,26 @@ async function main() {
 
         console.log(`\n\nCalibrator - Test ${i + 1} (${testCase}):`);
         console.log({
-            test: `Before price - ${testCase}`,
-            liquidity: utils.formatEther(liquidityBalanceBefore),
+            ratio: tslaRate(reserveBaseBefore, reserveQuoteBefore),
             reserveBase: utils.formatEther(reserveBaseBefore),
             reserveQuote: utils.formatEther(reserveQuoteBefore),
-            ratio: tslaRate(reserveBaseBefore, reserveQuoteBefore)
+            liquidity: utils.formatEther(liquidityBalanceBefore)
         });
 
+        const ratePrecision = 1000;
+
+        const targetBase = (new BN(testCase)).div(new BN(ogxtRate)).times(ratePrecision).integerValue().toString();
+
+        const targetQuote = ratePrecision;
+
+        console.log({
+            targetBase,
+            targetQuote
+        })
+
         await calibrator.setRatio(
-            (new BN(testCase)).div(new BN(ogxtRate)).times(1000).integerValue().toString(),
-            "1000"
+            targetBase,
+            targetQuote,
         );
 
         const liquidityBalanceAfter = await pair.balanceOf(vault.address);
@@ -165,11 +175,10 @@ async function main() {
         const [reserveBaseAfter, reserveQuoteAfter] = await calibrator.getRatio();
 
         console.log({
-            test: `After price - ${testCase}`,
-            liquidity: utils.formatEther(liquidityBalanceAfter),
+            ratio: tslaRate(reserveBaseAfter, reserveQuoteAfter),
             reserveBase: utils.formatEther(reserveBaseAfter),
             reserveQuote: utils.formatEther(reserveQuoteAfter),
-            ratio: tslaRate(reserveBaseAfter, reserveQuoteAfter)
+            liquidity: utils.formatEther(liquidityBalanceAfter)
         });
     }
 }
