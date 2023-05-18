@@ -44,9 +44,7 @@ describe("Calibrator", () => {
 
         const {
             baseToQuote,
-            requiredBase,
             requiredQuote,
-            leftoverBase,
             leftoverQuote,
             leftoverLiquidity,
             reserveBase,
@@ -63,9 +61,7 @@ describe("Calibrator", () => {
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveQuote.toString(),
             liquidityBalance: leftoverLiquidity.toString(),
-            requiredBase: requiredBase.toString(),
             requiredQuote: requiredQuote.toString(),
-            leftoverBase: leftoverBase.toString(),
             leftoverQuote: leftoverQuote.toString(),
             outcomeRatio: (new BN(reserveQuote.toString())).div(new BN(reserveBase.toString())).toString()
         }
@@ -106,20 +102,6 @@ describe("Calibrator", () => {
             leftoverQuote = "0";
         }
 
-        let requiredBase;
-        let leftoverBase;
-
-        if (baseBalanceNew.gt(baseBalanceOld)) {
-            requiredBase = "0";
-            leftoverBase = baseBalanceNew.sub(baseBalanceOld).toString();
-        } else if (baseBalanceNew.lt(baseBalanceOld)) {
-            requiredBase = baseBalanceOld.sub(baseBalanceNew).toString();
-            leftoverBase = "0";
-        } else {
-            requiredBase = "0";
-            leftoverBase = "0";
-        }
-
         const [reserveBase, reserveQuote] = await calibrator.getRatio();
 
         liquidityBalance = await pair.balanceOf(wallet.address)
@@ -131,9 +113,7 @@ describe("Calibrator", () => {
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveQuote.toString(),
             liquidityBalance: liquidityBalance.toString(),
-            requiredBase,
             requiredQuote,
-            leftoverBase,
             leftoverQuote,
             outcomeRatio: (new BN(reserveQuote.toString())).div(new BN(reserveBase.toString())).toString()
         }
