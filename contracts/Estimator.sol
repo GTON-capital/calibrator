@@ -15,24 +15,29 @@ abstract contract Estimator is Base {
         uint256 reserveQuote;
     }
 
-    struct Context {
+    struct EstimationContext {
         uint256 availableQuote;
         uint256 availableBase;
         uint256 minimumLiquidity;
         uint256 totalSupply;
+        uint256 vaultLiquidity;
     }
 
     function estimate(
         uint256 targetRatioBase,
         uint256 targetRatioQuote
     ) external view returns (Estimation memory estimation) {
-        Context memory context;
+        EstimationContext memory context;
 
         (estimation.reserveBase, estimation.reserveQuote) = getRatio();
 
         uint256 reserveBaseInvariant = estimation.reserveBase;
 
-        (estimation, context) = removeLiquidityDryrun(estimation);
+        context.totalSupply = pair.totalSupply();
+
+        context.vaultLiquidity = pair.balanceOf(getVault());
+
+        (estimation, context) = removeLiquidityDryrun(estimation, context, minimumBase);
 
         while (
             !Calculate.checkPrecision(
@@ -48,7 +53,9 @@ abstract contract Estimator is Base {
                 estimation,
                 context,
                 targetRatioBase,
-                targetRatioQuote
+                targetRatioQuote,
+                feeNumerator,
+                feeDenominator
             );
         }
 
@@ -60,18 +67,17 @@ abstract contract Estimator is Base {
     }
 
     function removeLiquidityDryrun(
-        Estimation memory estimation
-    ) public view returns (Estimation memory, Context memory context) {
-        context.totalSupply = pair.totalSupply();
-
-        uint256 vaultLiquidity = pair.balanceOf(getVault());
-
+        Estimation memory estimation,
+        EstimationContext memory context,
+        uint256 minimumBase
+    ) public pure returns (Estimation memory, EstimationContext memory) {
         uint256 removedLiquidity;
+
         (context.minimumLiquidity, removedLiquidity) = Calculate
             .removeLiquidity(
                 estimation.reserveBase,
                 minimumBase,
-                vaultLiquidity,
+                context.vaultLiquidity,
                 context.totalSupply
             );
 
@@ -96,10 +102,12 @@ abstract contract Estimator is Base {
 
     function swapToRatioDryrun(
         Estimation memory estimation,
-        Context memory context,
+        EstimationContext memory context,
         uint256 targetRatioBase,
-        uint256 targetRatioQuote
-    ) public view returns (Estimation memory, Context memory) {
+        uint256 targetRatioQuote,
+        uint256 feeNumerator,
+        uint256 feeDenominator
+    ) public pure returns (Estimation memory, EstimationContext memory) {
         (bool baseToQuote, uint256 amountIn, uint256 amountOut) = Calculate
             .swapToRatio(
                 estimation.reserveBase,
@@ -135,7 +143,7 @@ abstract contract Estimator is Base {
 
     function addLiquidityDryrun(
         Estimation memory estimation,
-        Context memory context,
+        EstimationContext memory context,
         uint256 reserveBaseInvariant
     ) public pure returns (Estimation memory) {
         (uint256 addedBase, uint256 addedQuote) = Calculate.addLiquidity(
