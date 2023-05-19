@@ -9,7 +9,7 @@ contract Base is Ownable {
     IPair public pair;
     IERC20 public tokenBase;
     IERC20 public tokenQuote;
-    string public constant VERSION = "0.0.1";
+    string public constant VERSION = "0.0.2";
 
     uint256 public feeNumerator = 997;
     uint256 public feeDenominator = 1000;
