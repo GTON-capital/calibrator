@@ -39,6 +39,9 @@
 
               # ... any other dependencies we need
               solc
+
+              # to view code coverage
+              lcov
             ];
 
             # Decorative prompt override so we know when we're in a dev shell

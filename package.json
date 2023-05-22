@@ -36,6 +36,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "deploy:gton:testnet": "hardhat run --network gtonTestnet ./scripts/deploy-gton-testnet.ts",
+    "coverage": "forge coverage --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage",
     "test": "hardhat test",
     "test:local:env": "hardhat run --network localhost ./scripts/local.spec.ts"
   },

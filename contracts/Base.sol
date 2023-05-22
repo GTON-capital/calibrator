@@ -51,7 +51,7 @@ contract Base is Ownable {
         vault = _vault;
     }
 
-    function getVault() public view returns (address) {
+    function getVault() internal view returns (address) {
         return vault != address(0) ? vault : msg.sender;
     }
 
@@ -76,7 +76,7 @@ contract Base is Ownable {
     function sortTokens(
         address tokenA,
         address tokenB
-    ) public pure returns (address token0, address token1) {
+    ) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, "sortTokens: IDENTICAL_ADDRESSES");
 
         (token0, token1) = tokenA < tokenB

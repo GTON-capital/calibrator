@@ -46,7 +46,7 @@ contract Calibrator is Base, Estimator {
         reclaim();
     }
 
-    function removeLiquidity(uint256 reserveBaseInvariant) public onlyOwner {
+    function removeLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
         (, uint256 removedLiquidity) = Calculate.removeLiquidity(
             reserveBaseInvariant,
             minimumBase,
@@ -62,7 +62,7 @@ contract Calibrator is Base, Estimator {
     function swapToRatio(
         uint256 targetRatioBase,
         uint256 targetRatioQuote
-    ) public onlyOwner {
+    ) internal onlyOwner {
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
         (bool baseToQuote, uint256 amountIn, uint256 amountOut) = Calculate
@@ -100,7 +100,7 @@ contract Calibrator is Base, Estimator {
         pair.swap(amount0Out, amount1Out, address(this), new bytes(0));
     }
 
-    function addLiquidity(uint256 reserveBaseInvariant) public onlyOwner {
+    function addLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
         (uint256 addedBase, uint256 addedQuote) = Calculate.addLiquidity(
@@ -128,7 +128,7 @@ contract Calibrator is Base, Estimator {
         pair.mint(address(this));
     }
 
-    function reclaim() public onlyOwner {
+    function reclaim() internal onlyOwner {
         pair.transfer(getVault(), pair.balanceOf(address(this)));
 
         tokenBase.transfer(getVault(), tokenBase.balanceOf(address(this)));

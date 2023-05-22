@@ -3,48 +3,136 @@ pragma solidity 0.8.19;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {ERC20PresetFixedSupply} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol";
-import {Calibrator} from "../contracts/Calibrator.sol";
-import {Estimator} from "../contracts/Estimator.sol";
-import {IFactory} from "../contracts/interfaces/IFactory.sol";
-import {IPair} from "../contracts/interfaces/IPair.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Calculate} from "contracts/libraries/Calculate.sol";
 
 contract CalibratorTest is Test {
-    Calibrator calibrator;
-    ERC20PresetFixedSupply tokenBase;
-    ERC20PresetFixedSupply tokenQuote;
-    IFactory factory;
-    IPair pair;
+    // @openzeppelin/test/utils/math/Math.t.sol
+    function _mulHighLow(uint256 x, uint256 y) private pure returns (uint256 high, uint256 low) {
+        (uint256 x0, uint256 x1) = (x & type(uint128).max, x >> 128);
+        (uint256 y0, uint256 y1) = (y & type(uint128).max, y >> 128);
 
-    function deployFactory() public returns (IFactory) {
-        bytes memory args = abi.encode(address(this));
-        bytes memory bytecode = abi.encodePacked(vm.getCode("../node_modules/@gton/ogs-core/build:OGXFactory"), args);
-        address factoryAddress;
-        assembly {
-              factoryAddress := create(0, add(bytecode, 0x20), mload(bytecode))
-                }
-        return IFactory(factoryAddress);
+        // Karatsuba algorithm
+        // https://en.wikipedia.org/wiki/Karatsuba_algorithm
+        uint256 z2 = x1 * y1;
+        uint256 z1a = x1 * y0;
+        uint256 z1b = x0 * y1;
+        uint256 z0 = x0 * y0;
+
+        uint256 carry = ((z1a & type(uint128).max) + (z1b & type(uint128).max) + (z0 >> 128)) >> 128;
+
+        high = z2 + (z1a >> 128) + (z1b >> 128) + carry;
+
+        unchecked {
+            low = x * y;
+        }
     }
 
-    function setUp() public {
-        tokenBase = new ERC20PresetFixedSupply("Base", "BASE", 10000000*(10**18), address(this));
+    function testFuzz_removeLiquidity(
+        uint256 reserveBaseInvariant,
+        uint256 minimumBase,
+        uint256 availableLiquidity,
+        uint256 totalSupply
+    ) public {
+        vm.assume(reserveBaseInvariant > 0);
 
-        tokenQuote = new ERC20PresetFixedSupply("Base", "BASE", 10000000*(10**18), address(this));
+        // Full precision for x * y
+        (uint256 xyHi, ) = _mulHighLow(totalSupply, minimumBase);
 
-        factory = deployFactory();
+        // Assume result won't overflow
+        // This also checks that `d` is positive
+        vm.assume(xyHi < reserveBaseInvariant);
 
-        address pairAddress = factory.createPair(address(tokenBase), address(tokenQuote));
+        uint256 minimumLiquidityExpected = Math.mulDiv(
+            totalSupply,
+            minimumBase,
+            reserveBaseInvariant
+        );
 
-        pair = IPair(pairAddress);
+        vm.assume(availableLiquidity >= minimumLiquidityExpected);
 
-        tokenBase.transfer(address(pair), 2474195218611459158903569);
-        tokenQuote.transfer(address(pair), 1000002480398709503374);
-        pair.mint(address(this));
+        (uint256 minimumLiquidity,
+         uint256 removedLiquidity) = Calculate.removeLiquidity(
+            reserveBaseInvariant,
+            minimumBase,
+            availableLiquidity,
+            totalSupply
+         );
 
-        calibrator = new Calibrator(address(pair), address(tokenBase), address(tokenQuote));
+        assertTrue(minimumLiquidity == minimumLiquidityExpected);
+
+        assertTrue(availableLiquidity == minimumLiquidity + removedLiquidity);
     }
 
-    function test_estimate() public {
-        Estimator.Estimation memory estimation = calibrator.estimate(167,1);
-        assertEq(estimation.reserveBase, 2474195218611459158903569);
+    function testFail_removeLiquidity() public pure {
+        Calculate.removeLiquidity(1,1,0,1);
+
+        //"removeLiquidity: INSUFFICIENT_LIQUIDITY"
     }
+
+    function test_swapToRatio_true() public {
+        (bool baseToQuote,
+         uint256 amountIn,
+         uint256 amountOut) = Calculate.swapToRatio(10,10,10,5,1,1);
+
+        assertEq(baseToQuote, true);
+        assertEq(amountIn, 4);
+        assertEq(amountOut, 2);
+    }
+
+    function test_swapToRatio_false() public {
+        (bool baseToQuote,
+         uint256 amountIn,
+         uint256 amountOut) = Calculate.swapToRatio(10,10,5,10,1,1);
+
+        assertEq(baseToQuote, false);
+        assertEq(amountIn, 4);
+        assertEq(amountOut, 2);
+    }
+
+    // function testFail_swapToRatio() public pure {
+    //     (bool baseToQuote,
+    //      uint256 amountIn,
+    //      uint256 amountOut) = Calculate.swapToRatio(1,1,1,1,1,1);
+
+    //     //"swapToRatio: leftSide==rightSide"
+    // }
+
+    function test_addLiquidity() public {
+        (uint256 amountBaseDesired,
+         uint256 amountQuoteOptimal) = Calculate.addLiquidity(1,1,1);
+
+        assertEq(amountBaseDesired, 0);
+        assertEq(amountQuoteOptimal, 0);
+    }
+
+    function test_checkPrecision_True() public {
+        (bool isPrecise) = Calculate.checkPrecision(1,1,1,1,1,1);
+
+        assertEq(isPrecise, true);
+    }
+
+    function test_checkPrecision_False() public {
+        (bool isPrecise) = Calculate.checkPrecision(10,10,1,5,1,1);
+
+        assertEq(isPrecise, false);
+    }
+
+    function test_getAmountOut() public {
+        (uint256 amountOut) = Calculate.getAmountOut(1,1,1,1,1);
+
+        assertEq(amountOut, 0);
+    }
+
+    // function testFail_getAmountOut_input() public pure {
+    //     (uint256 amountOut) = Calculate.getAmountOut(0,1,1,1,1);
+
+    //     //"getAmountOut: INSUFFICIENT_INPUT_AMOUNT"
+    // }
+
+    // function testFail_getAmountOut_liquidity() public {
+    //     (uint256 amountOut) = Calculate.getAmountOut(1,0,1,1,1);
+
+    //     //"getAmountOut: INSUFFICIENT_LIQUIDITY"
+    // }
 }

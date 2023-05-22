@@ -70,7 +70,7 @@ abstract contract Estimator is Base {
         Estimation memory estimation,
         EstimationContext memory context,
         uint256 minimumBase
-    ) public pure returns (Estimation memory, EstimationContext memory) {
+    ) internal pure returns (Estimation memory, EstimationContext memory) {
         uint256 removedLiquidity;
 
         (context.minimumLiquidity, removedLiquidity) = Calculate
@@ -107,7 +107,7 @@ abstract contract Estimator is Base {
         uint256 targetRatioQuote,
         uint256 feeNumerator,
         uint256 feeDenominator
-    ) public pure returns (Estimation memory, EstimationContext memory) {
+    ) internal pure returns (Estimation memory, EstimationContext memory) {
         (bool baseToQuote, uint256 amountIn, uint256 amountOut) = Calculate
             .swapToRatio(
                 estimation.reserveBase,
@@ -145,7 +145,7 @@ abstract contract Estimator is Base {
         Estimation memory estimation,
         EstimationContext memory context,
         uint256 reserveBaseInvariant
-    ) public pure returns (Estimation memory) {
+    ) internal pure returns (Estimation memory) {
         (uint256 addedBase, uint256 addedQuote) = Calculate.addLiquidity(
             estimation.reserveBase,
             estimation.reserveQuote,
