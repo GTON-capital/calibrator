@@ -31,7 +31,9 @@
     "@gton/ogs-periphery": "^1.1.0-beta.1",
     "@openzeppelin/contracts": "^4.8.3",
     "@xyrusworx/hardhat-solidity-json": "^1.0.2",
-    "bignumber.js": "^9.1.1"
+    "bignumber.js": "^9.1.1",
+    "ds-test": "dapphub/ds-test",
+    "forge-std": "foundry-rs/forge-std"
   },
   "scripts": {
     "compile": "hardhat compile",

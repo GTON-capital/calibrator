@@ -2,15 +2,14 @@
 src = "contracts"
 out = "artifacts"
 libs = [
-    "lib",
     "node_modules",
 ]
 remappings = [
     "@ethereum-waffle/=node_modules/@ethereum-waffle/",
     "@gton/=node_modules/@gton/",
     "@openzeppelin/=node_modules/@openzeppelin/",
-    "ds-test/=lib/forge-std/lib/ds-test/src/",
-    "forge-std/=lib/forge-std/src/",
+    "ds-test/=node_modules/ds-test/src/",
+    "forge-std/=node_modules/forge-std/src/",
     "hardhat/=node_modules/hardhat/",
 ]
 fs_permissions = [{ access = "read", path = "./node_modules"}]
