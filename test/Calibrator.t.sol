@@ -14,9 +14,7 @@ contract CalibratorTestHarness is Calibrator {
         address _tokenQuote
     ) Calibrator(_pair, _tokenBase, _tokenQuote) {}
 
-    function exposed_removeLiquidity(
-        uint256 reserveBaseInvariant
-    ) external {
+    function exposed_removeLiquidity(uint256 reserveBaseInvariant) external {
         return removeLiquidity(reserveBaseInvariant);
     }
 
@@ -24,14 +22,10 @@ contract CalibratorTestHarness is Calibrator {
         uint256 targetBase,
         uint256 targetQuote
     ) external {
-        return swapToRatio(
-        targetBase,
-        targetQuote);
+        return swapToRatio(targetBase, targetQuote);
     }
 
-    function exposed_addLiquidity(
-        uint256 reserveBaseInvariant
-    ) external {
+    function exposed_addLiquidity(uint256 reserveBaseInvariant) external {
         return addLiquidity(reserveBaseInvariant);
     }
 }
@@ -45,22 +39,38 @@ contract CalibratorTest is Test {
 
     function deployFactory() public returns (IFactory) {
         bytes memory args = abi.encode(address(this));
-        bytes memory bytecode = abi.encodePacked(vm.getCode("../node_modules/@gton/ogs-core/build:OGXFactory"), args);
+        bytes memory bytecode = abi.encodePacked(
+            vm.getCode("../node_modules/@gton/ogs-core/build:OGXFactory"),
+            args
+        );
         address factoryAddress;
         assembly {
-              factoryAddress := create(0, add(bytecode, 0x20), mload(bytecode))
-                }
+            factoryAddress := create(0, add(bytecode, 0x20), mload(bytecode))
+        }
         return IFactory(factoryAddress);
     }
 
     function setUp() public {
-        tokenBase = new ERC20PresetFixedSupply("Base", "BASE", 10000000*(10**18), address(this));
+        tokenBase = new ERC20PresetFixedSupply(
+            "Base",
+            "BASE",
+            10000000 * (10 ** 18),
+            address(this)
+        );
 
-        tokenQuote = new ERC20PresetFixedSupply("Base", "BASE", 10000000*(10**18), address(this));
+        tokenQuote = new ERC20PresetFixedSupply(
+            "Base",
+            "BASE",
+            10000000 * (10 ** 18),
+            address(this)
+        );
 
         factory = deployFactory();
 
-        address pairAddress = factory.createPair(address(tokenBase), address(tokenQuote));
+        address pairAddress = factory.createPair(
+            address(tokenBase),
+            address(tokenQuote)
+        );
 
         pair = IPair(pairAddress);
 
@@ -68,14 +78,18 @@ contract CalibratorTest is Test {
         tokenQuote.transfer(address(pair), 1000002480398709503374);
         pair.mint(address(this));
 
-        calibrator = new CalibratorTestHarness(address(pair), address(tokenBase), address(tokenQuote));
+        calibrator = new CalibratorTestHarness(
+            address(pair),
+            address(tokenBase),
+            address(tokenQuote)
+        );
     }
 
     function test_setRatio() public {
         pair.approve(address(calibrator), pair.balanceOf(address(this)));
         tokenQuote.approve(address(calibrator), pair.balanceOf(address(this)));
 
-        calibrator.setRatio(167,1);
+        calibrator.setRatio(167, 1);
 
         (uint256 reserveBase, ) = calibrator.getRatio();
 

@@ -27,20 +27,14 @@ contract Base is Ownable {
         tokenQuote = IERC20(_tokenQuote);
     }
 
-    function setFee(
-        uint256 _feeNumerator,
-        uint256 _feeDenominator
-    ) external onlyOwner {
+    function setFee(uint256 _feeNumerator, uint256 _feeDenominator) external onlyOwner {
         require(_feeDenominator > 0, "setFee: feeDenominator>0");
 
         feeNumerator = _feeNumerator;
         feeDenominator = _feeDenominator;
     }
 
-    function setPrecision(
-        uint256 _precisionNumerator,
-        uint256 _precisionDenominator
-    ) external onlyOwner {
+    function setPrecision(uint256 _precisionNumerator, uint256 _precisionDenominator) external onlyOwner {
         require(_precisionDenominator > 0, "setPrecision: precisionDenominator>0");
 
         precisionNumerator = _precisionNumerator;
@@ -60,32 +54,18 @@ contract Base is Ownable {
     }
 
     // retrieve current pool ratio
-    function getRatio()
-        public
-        view
-        returns (uint256 ratioBase, uint256 ratioQuote)
-    {
-        (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
+    function getRatio() public view returns (uint256 ratioBase, uint256 ratioQuote) {
+        (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
 
-        (address token0, ) = sortTokens(
-            address(tokenBase),
-            address(tokenQuote)
-        );
+        (address token0,) = sortTokens(address(tokenBase), address(tokenQuote));
 
-        (ratioBase, ratioQuote) = address(tokenBase) == token0
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+        (ratioBase, ratioQuote) = address(tokenBase) == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 
-    function sortTokens(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (address token0, address token1) {
+    function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, "sortTokens: IDENTICAL_ADDRESSES");
 
-        (token0, token1) = tokenA < tokenB
-            ? (tokenA, tokenB)
-            : (tokenB, tokenA);
+        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
 
         require(token0 != address(0), "sortTokens: ZERO_ADDRESS");
     }

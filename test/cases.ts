@@ -1,14 +1,15 @@
 export interface TestCase {
-    targetBase: string;
-    targetQuote: string;
-    reserveBase: string;
-    reserveQuote: string;
-    liquidityBalance: string;
-    requiredQuote: string;
-    leftoverQuote: string;
+  targetBase: string
+  targetQuote: string
+  reserveBase: string
+  reserveQuote: string
+  liquidityBalance: string
+  requiredQuote: string
+  leftoverQuote: string
 }
 
-export const simpleCases = [ {
+export const simpleCases = [
+  {
     targetBase: "4",
     targetQuote: "10",
     targetRatio: "2.5",
@@ -17,8 +18,9 @@ export const simpleCases = [ {
     liquidityBalance: "817572681397520125998",
     requiredQuote: "0",
     leftoverQuote: "414679593716972499639436",
-    outcomeRatio: "2.50001064293419387976"
-}, {
+    outcomeRatio: "2.50001064293419387976",
+  },
+  {
     targetBase: "5",
     targetQuote: "10",
     targetRatio: "2",
@@ -27,8 +29,9 @@ export const simpleCases = [ {
     liquidityBalance: "731141851390288297559",
     requiredQuote: "0",
     leftoverQuote: "259084452436428994532",
-    outcomeRatio: "2.00000125075592561254"
-}, {
+    outcomeRatio: "2.00000125075592561254",
+  },
+  {
     targetBase: "4",
     targetQuote: "10",
     targetRatio: "2.5",
@@ -37,8 +40,9 @@ export const simpleCases = [ {
     liquidityBalance: "817182231628958209830",
     requiredQuote: "258668640868312622573",
     leftoverQuote: "0",
-    outcomeRatio: "2.49920816448564408074"
-}, {
+    outcomeRatio: "2.49920816448564408074",
+  },
+  {
     targetBase: "10",
     targetQuote: "8",
     targetRatio: "0.8",
@@ -47,8 +51,9 @@ export const simpleCases = [ {
     liquidityBalance: "462040048740598536336",
     requiredQuote: "0",
     leftoverQuote: "880459457797852017909",
-    outcomeRatio: "0.800001615458423325"
-}, {
+    outcomeRatio: "0.800001615458423325",
+  },
+  {
     targetBase: "1",
     targetQuote: "12",
     targetRatio: "12",
@@ -57,8 +62,9 @@ export const simpleCases = [ {
     liquidityBalance: "1787472628097483542754",
     requiredQuote: "5803359272675537769450",
     leftoverQuote: "0",
-    outcomeRatio: "11.99995636085019877053"
-}, {
+    outcomeRatio: "11.99995636085019877053",
+  },
+  {
     targetBase: "16",
     targetQuote: "100",
     targetRatio: "6.25",
@@ -67,10 +73,12 @@ export const simpleCases = [ {
     liquidityBalance: "1289460985450098101721",
     requiredQuote: "0",
     leftoverQuote: "2979388337258223541483",
-    outcomeRatio: "6.25000827416971501019"
-}]
+    outcomeRatio: "6.25000827416971501019",
+  },
+]
 
-export const realCases = [ {
+export const realCases = [
+  {
     targetBase: "100",
     targetQuote: "18704",
     targetRatio: "187.04",
@@ -79,8 +87,9 @@ export const realCases = [ {
     liquidityBalance: "7076236235630350318638",
     requiredQuote: "0",
     leftoverQuote: "319058275591791032601512",
-    outcomeRatio: "187.04044410174327783613"
-}, {
+    outcomeRatio: "187.04044410174327783613",
+  },
+  {
     targetBase: "100",
     targetQuote: "18431",
     targetRatio: "184.31",
@@ -89,8 +98,9 @@ export const realCases = [ {
     liquidityBalance: "7024319498101016812588",
     requiredQuote: "0",
     leftoverQuote: "1414788563990457834371",
-    outcomeRatio: "184.31003105190884624566"
-}, {
+    outcomeRatio: "184.31003105190884624566",
+  },
+  {
     targetBase: "100",
     targetQuote: "18059",
     targetRatio: "180.59",
@@ -99,8 +109,9 @@ export const realCases = [ {
     liquidityBalance: "6952964591393110418234",
     requiredQuote: "0",
     leftoverQuote: "1927561350484615715881",
-    outcomeRatio: "180.59001323463507562309"
-}, {
+    outcomeRatio: "180.59001323463507562309",
+  },
+  {
     targetBase: "100",
     targetQuote: "16299",
     targetRatio: "162.99",
@@ -109,8 +120,9 @@ export const realCases = [ {
     liquidityBalance: "6604973816902889865359",
     requiredQuote: "0",
     leftoverQuote: "9119576882152123997630",
-    outcomeRatio: "162.99006059028750704069"
-}, {
+    outcomeRatio: "162.99006059028750704069",
+  },
+  {
     targetBase: "100",
     targetQuote: "16255",
     targetRatio: "162.55",
@@ -119,8 +131,9 @@ export const realCases = [ {
     liquidityBalance: "6596051309157604511967",
     requiredQuote: "0",
     leftoverQuote: "227674638715225005393",
-    outcomeRatio: "162.55066927734741841464"
-}, {
+    outcomeRatio: "162.55066927734741841464",
+  },
+  {
     targetBase: "100",
     targetQuote: "16067",
     targetRatio: "160.67",
@@ -129,8 +142,9 @@ export const realCases = [ {
     liquidityBalance: "6557726099044385144809",
     requiredQuote: "0",
     leftoverQuote: "974479112033695916881",
-    outcomeRatio: "160.67001336026593291238"
-}, {
+    outcomeRatio: "160.67001336026593291238",
+  },
+  {
     targetBase: "100",
     targetQuote: "15375",
     targetRatio: "153.75",
@@ -139,8 +153,9 @@ export const realCases = [ {
     liquidityBalance: "6414742636263096059182",
     requiredQuote: "0",
     leftoverQuote: "3585654313789366577047",
-    outcomeRatio: "153.7500271660379436439"
-}, {
+    outcomeRatio: "153.7500271660379436439",
+  },
+  {
     targetBase: "100",
     targetQuote: "16019",
     targetRatio: "160.19",
@@ -149,8 +164,9 @@ export const realCases = [ {
     liquidityBalance: "6547507836890280268081",
     requiredQuote: "3336917465257485820259",
     leftoverQuote: "0",
-    outcomeRatio: "160.1899739010194145676"
-}, {
+    outcomeRatio: "160.1899739010194145676",
+  },
+  {
     targetBase: "100",
     targetQuote: "16431",
     targetRatio: "164.31",
@@ -159,8 +175,9 @@ export const realCases = [ {
     liquidityBalance: "6631046066909959873204",
     requiredQuote: "2134818064354114334016",
     leftoverQuote: "0",
-    outcomeRatio: "164.30997829623028010551"
-}, {
+    outcomeRatio: "164.30997829623028010551",
+  },
+  {
     targetBase: "100",
     targetQuote: "16183",
     targetRatio: "161.83",
@@ -169,8 +186,9 @@ export const realCases = [ {
     liquidityBalance: "6580738847632624730607",
     requiredQuote: "0",
     leftoverQuote: "1285016896103020290683",
-    outcomeRatio: "161.83001274400583705831"
-}, {
+    outcomeRatio: "161.83001274400583705831",
+  },
+  {
     targetBase: "100",
     targetQuote: "16031",
     targetRatio: "160.31",
@@ -179,8 +197,9 @@ export const realCases = [ {
     liquidityBalance: "6549714632883839028581",
     requiredQuote: "0",
     leftoverQuote: "787599719352744455506",
-    outcomeRatio: "160.31001703121806149032"
-}, {
+    outcomeRatio: "160.31001703121806149032",
+  },
+  {
     targetBase: "100",
     targetQuote: "16061",
     targetRatio: "160.61",
@@ -189,8 +208,9 @@ export const realCases = [ {
     liquidityBalance: "6555821102108970482227",
     requiredQuote: "155201364444099357224",
     leftoverQuote: "0",
-    outcomeRatio: "160.60954152669110840826"
-}, {
+    outcomeRatio: "160.60954152669110840826",
+  },
+  {
     targetBase: "100",
     targetQuote: "16061",
     targetRatio: "160.61",
@@ -199,8 +219,9 @@ export const realCases = [ {
     liquidityBalance: "6555820808809893037436",
     requiredQuote: "0",
     leftoverQuote: "3672222410676638",
-    outcomeRatio: "160.60953443963637301702"
-}, {
+    outcomeRatio: "160.60953443963637301702",
+  },
+  {
     targetBase: "100",
     targetQuote: "16120",
     targetRatio: "161.2",
@@ -209,8 +230,9 @@ export const realCases = [ {
     liquidityBalance: "6567824337984880785828",
     requiredQuote: "305494971867803756585",
     leftoverQuote: "0",
-    outcomeRatio: "161.19911190660003712326"
-}, {
+    outcomeRatio: "161.19911190660003712326",
+  },
+  {
     targetBase: "100",
     targetQuote: "17006",
     targetRatio: "170.06",
@@ -219,8 +241,9 @@ export const realCases = [ {
     liquidityBalance: "6745653031611372168721",
     requiredQuote: "4591334950279901656706",
     leftoverQuote: "0",
-    outcomeRatio: "170.05997011784135755248"
-}, {
+    outcomeRatio: "170.05997011784135755248",
+  },
+  {
     targetBase: "100",
     targetQuote: "17179",
     targetRatio: "171.79",
@@ -229,8 +252,9 @@ export const realCases = [ {
     liquidityBalance: "6779774721821016532207",
     requiredQuote: "895074031389870048474",
     leftoverQuote: "0",
-    outcomeRatio: "171.78738146260205642362"
-}, {
+    outcomeRatio: "171.78738146260205642362",
+  },
+  {
     targetBase: "100",
     targetQuote: "16915",
     targetRatio: "169.15",
@@ -239,8 +263,9 @@ export const realCases = [ {
     liquidityBalance: "6727452625953447695174",
     requiredQuote: "0",
     leftoverQuote: "1366563909473533267597",
-    outcomeRatio: "169.15003760301141583771"
-}, {
+    outcomeRatio: "169.15003760301141583771",
+  },
+  {
     targetBase: "100",
     targetQuote: "16854",
     targetRatio: "168.54",
@@ -249,8 +274,9 @@ export const realCases = [ {
     liquidityBalance: "6715310776982160917002",
     requiredQuote: "0",
     leftoverQuote: "315614432338853134463",
-    outcomeRatio: "168.54093049916016994819"
-}, {
+    outcomeRatio: "168.54093049916016994819",
+  },
+  {
     targetBase: "100",
     targetQuote: "17208",
     targetRatio: "172.08",
@@ -259,5 +285,6 @@ export const realCases = [ {
     liquidityBalance: "6785343431066218140475",
     requiredQuote: "1833795629252475247557",
     leftoverQuote: "0",
-    outcomeRatio: "172.07998901594506517691"
-}]
+    outcomeRatio: "172.07998901594506517691",
+  },
+]

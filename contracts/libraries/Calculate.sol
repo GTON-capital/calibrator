@@ -41,7 +41,11 @@ library Calculate {
         returns (bool baseToQuote, uint256 amountIn, uint256 amountOut)
     {
         // multiply by 1000 so that targetRatio doesn't round the same as reserveRatio
-        uint256 reserveBaseDesired = Math.mulDiv(targetBase * 1000, reserveQuote, targetQuote);
+        uint256 reserveBaseDesired = Math.mulDiv(
+            targetBase * 1000,
+            reserveQuote,
+            targetQuote
+        );
 
         if (reserveBaseDesired == reserveBase * 1000) {
             return (false, 0, 0);
@@ -72,7 +76,10 @@ library Calculate {
         // happens when reverse target ratio rounds
         // to a larger quotient than reverse reserve ratio
         // due to precision errors in division and sqrt
-        require(reserveInOptimal > reserveIn, "swapToRatio: reserveInOptimal<reserveIn");
+        require(
+            reserveInOptimal > reserveIn,
+            "swapToRatio: reserveInOptimal<reserveIn"
+        );
 
         amountIn = reserveInOptimal - reserveIn;
 

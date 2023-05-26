@@ -7,7 +7,10 @@ import {Calculate} from "contracts/libraries/Calculate.sol";
 
 contract CalibratorTest is Test {
     // @openzeppelin/test/utils/math/Math.t.sol
-    function _mulHighLow(uint256 x, uint256 y) private pure returns (uint256 high, uint256 low) {
+    function _mulHighLow(
+        uint256 x,
+        uint256 y
+    ) private pure returns (uint256 high, uint256 low) {
         (uint256 x0, uint256 x1) = (x & type(uint128).max, x >> 128);
         (uint256 y0, uint256 y1) = (y & type(uint128).max, y >> 128);
 
@@ -18,7 +21,9 @@ contract CalibratorTest is Test {
         uint256 z1b = x0 * y1;
         uint256 z0 = x0 * y0;
 
-        uint256 carry = ((z1a & type(uint128).max) + (z1b & type(uint128).max) + (z0 >> 128)) >> 128;
+        uint256 carry = ((z1a & type(uint128).max) +
+            (z1b & type(uint128).max) +
+            (z0 >> 128)) >> 128;
 
         high = z2 + (z1a >> 128) + (z1b >> 128) + carry;
 
@@ -27,7 +32,11 @@ contract CalibratorTest is Test {
         }
     }
 
-    function mulDivValid(uint256 x, uint256 y, uint256 z) private pure returns (bool) {
+    function mulDivValid(
+        uint256 x,
+        uint256 y,
+        uint256 z
+    ) private pure returns (bool) {
         // Full precision for x * y
         (uint256 xyHi, ) = _mulHighLow(x, y);
 
@@ -37,7 +46,7 @@ contract CalibratorTest is Test {
     }
 
     function mulValid(uint256 x, uint256 y) private pure returns (bool) {
-        if (x == 0 || y == 0) { return true; }
+        if (x == 0 || y == 0) return true;
 
         return type(uint256).max / x > y && type(uint256).max / y > x;
     }
@@ -68,7 +77,7 @@ contract CalibratorTest is Test {
             minimumBase,
             availableLiquidity,
             totalSupply
-         );
+        );
     }
 
     function test_swapToRatio_movesPrice(
@@ -100,16 +109,15 @@ contract CalibratorTest is Test {
         // getAmountOut will overflow with parameters > uint96
         // can't write vm.assume without copying implementation
 
-        (bool baseToQuote,
-         uint256 amountIn,
-         uint256 amountOut) = Calculate.swapToRatio(
-             reserveBase,
-             reserveQuote,
-             targetBase,
-             targetQuote,
-             feeNumerator,
-             feeDenominator
-         );
+        (bool baseToQuote, uint256 amountIn, uint256 amountOut) = Calculate
+            .swapToRatio(
+                reserveBase,
+                reserveQuote,
+                targetBase,
+                targetQuote,
+                feeNumerator,
+                feeDenominator
+            );
 
         (uint256 targetIn, uint256 targetOut) = baseToQuote
             ? (targetBase, targetQuote)
@@ -124,10 +132,10 @@ contract CalibratorTest is Test {
         // and ignoring the swap fee
 
         // moves price in the direction of target
-        uint256 ratioNew = (reserveIn+amountIn)/(reserveOut-amountOut);
-        uint256 ratioTarget = targetIn/targetOut;
-        assertLe(reserveIn/reserveOut, ratioNew);
-        assertLe(ratioNew, ratioTarget!=0 ? ratioTarget : 1);
+        uint256 ratioNew = (reserveIn + amountIn) / (reserveOut - amountOut);
+        uint256 ratioTarget = targetIn / targetOut;
+        assertLe(reserveIn / reserveOut, ratioNew);
+        assertLe(ratioNew, ratioTarget != 0 ? ratioTarget : 1);
     }
 
     function test_addLiquidity(
@@ -137,13 +145,15 @@ contract CalibratorTest is Test {
     ) public pure {
         vm.assume(reserveBaseInvariant >= reserveBase);
 
-        vm.assume(mulDivValid(reserveBaseInvariant - reserveBase, reserveQuote, reserveBase));
+        vm.assume(
+            mulDivValid(
+                reserveBaseInvariant - reserveBase,
+                reserveQuote,
+                reserveBase
+            )
+        );
 
-        Calculate.addLiquidity(
-            reserveBase,
-            reserveQuote,
-            reserveBaseInvariant
-         );
+        Calculate.addLiquidity(reserveBase, reserveQuote, reserveBaseInvariant);
     }
 
     function test_checkPrecision(
@@ -156,11 +166,19 @@ contract CalibratorTest is Test {
     ) public pure {
         vm.assume(mulValid(targetQuote, precisionDenominator));
 
-        vm.assume(mulDivValid(reserveBase, targetQuote * precisionDenominator, reserveQuote));
+        vm.assume(
+            mulDivValid(
+                reserveBase,
+                targetQuote * precisionDenominator,
+                reserveQuote
+            )
+        );
 
         vm.assume(mulValid(targetBase, precisionDenominator));
 
-        vm.assume(addValid(targetBase * precisionDenominator, precisionNumerator));
+        vm.assume(
+            addValid(targetBase * precisionDenominator, precisionNumerator)
+        );
 
         Calculate.checkPrecision(
             reserveBase,
@@ -189,16 +207,18 @@ contract CalibratorTest is Test {
 
         vm.assume(mulValid(reserveIn, feeDenominator));
 
-        vm.assume(addValid(reserveIn * feeDenominator, amountIn * feeNumerator));
+        vm.assume(
+            addValid(reserveIn * feeDenominator, amountIn * feeNumerator)
+        );
 
         vm.assume(feeDenominator > 0);
 
         Calculate.getAmountOut(
-        amountIn,
-        reserveIn,
-        reserveOut,
-        feeNumerator,
-        feeDenominator
+            amountIn,
+            reserveIn,
+            reserveOut,
+            feeNumerator,
+            feeDenominator
         );
     }
 }

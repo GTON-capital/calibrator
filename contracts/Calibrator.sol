@@ -10,17 +10,10 @@ import "./Base.sol";
 import "./Estimator.sol";
 
 contract Calibrator is Base, Estimator {
-    constructor(
-        address _pair,
-        address _tokenBase,
-        address _tokenQuote
-    ) Base(_pair, _tokenBase, _tokenQuote) {}
+    constructor(address _pair, address _tokenBase, address _tokenQuote) Base(_pair, _tokenBase, _tokenQuote) {}
 
-    function setRatio(
-        uint256 targetBase,
-        uint256 targetQuote
-    ) external onlyOwner {
-        (uint256 reserveBaseInvariant, ) = getRatio();
+    function setRatio(uint256 targetBase, uint256 targetQuote) external onlyOwner {
+        (uint256 reserveBaseInvariant,) = getRatio();
 
         removeLiquidity(reserveBaseInvariant);
 
@@ -28,12 +21,7 @@ contract Calibrator is Base, Estimator {
 
         while (
             !Calculate.checkPrecision(
-                reserveBase,
-                reserveQuote,
-                targetBase,
-                targetQuote,
-                precisionNumerator,
-                precisionDenominator
+                reserveBase, reserveQuote, targetBase, targetQuote, precisionNumerator, precisionDenominator
             )
         ) {
             swapToRatio(targetBase, targetQuote);
@@ -47,39 +35,24 @@ contract Calibrator is Base, Estimator {
     }
 
     function removeLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
-        (, uint256 removedLiquidity) = Calculate.removeLiquidity(
-            reserveBaseInvariant,
-            minimumBase,
-            pair.balanceOf(getVault()),
-            pair.totalSupply()
-        );
+        (, uint256 removedLiquidity) =
+            Calculate.removeLiquidity(reserveBaseInvariant, minimumBase, pair.balanceOf(getVault()), pair.totalSupply());
 
         pair.transferFrom(getVault(), address(pair), removedLiquidity);
 
         pair.burn(address(this));
     }
 
-    function swapToRatio(
-        uint256 targetBase,
-        uint256 targetQuote
-    ) internal onlyOwner {
+    function swapToRatio(uint256 targetBase, uint256 targetQuote) internal onlyOwner {
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
-        (bool baseToQuote, uint256 amountIn, uint256 amountOut) = Calculate
-            .swapToRatio(
-                reserveBase,
-                reserveQuote,
-                targetBase,
-                targetQuote,
-                feeNumerator,
-                feeDenominator
-            );
+        (bool baseToQuote, uint256 amountIn, uint256 amountOut) =
+            Calculate.swapToRatio(reserveBase, reserveQuote, targetBase, targetQuote, feeNumerator, feeDenominator);
 
         IERC20 tokenIn = baseToQuote ? tokenBase : tokenQuote;
 
         if (tokenIn.balanceOf(address(this)) < amountIn) {
-            uint256 missingTokenIn = amountIn -
-                tokenIn.balanceOf(address(this));
+            uint256 missingTokenIn = amountIn - tokenIn.balanceOf(address(this));
 
             tokenIn.transferFrom(getVault(), address(pair), missingTokenIn);
 
@@ -88,14 +61,10 @@ contract Calibrator is Base, Estimator {
             tokenIn.transfer(address(pair), amountIn);
         }
 
-        (address token0, ) = sortTokens(
-            address(tokenBase),
-            address(tokenQuote)
-        );
+        (address token0,) = sortTokens(address(tokenBase), address(tokenQuote));
 
-        (uint amount0Out, uint amount1Out) = address(tokenIn) == token0
-            ? (uint(0), amountOut)
-            : (amountOut, uint(0));
+        (uint256 amount0Out, uint256 amount1Out) =
+            address(tokenIn) == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
 
         pair.swap(amount0Out, amount1Out, address(this), new bytes(0));
     }
@@ -103,11 +72,8 @@ contract Calibrator is Base, Estimator {
     function addLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
-        (uint256 addedBase, uint256 addedQuote) = Calculate.addLiquidity(
-            reserveBase,
-            reserveQuote,
-            reserveBaseInvariant
-        );
+        (uint256 addedBase, uint256 addedQuote) =
+            Calculate.addLiquidity(reserveBase, reserveQuote, reserveBaseInvariant);
 
         tokenBase.transfer(address(pair), addedBase);
 
@@ -116,11 +82,7 @@ contract Calibrator is Base, Estimator {
         if (addedQuote > availableQuote) {
             tokenQuote.transfer(address(pair), availableQuote);
 
-            tokenQuote.transferFrom(
-                getVault(),
-                address(pair),
-                addedQuote - availableQuote
-            );
+            tokenQuote.transferFrom(getVault(), address(pair), addedQuote - availableQuote);
         } else {
             tokenQuote.transfer(address(pair), addedQuote);
         }
