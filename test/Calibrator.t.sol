@@ -21,12 +21,12 @@ contract CalibratorTestHarness is Calibrator {
     }
 
     function exposed_swapToRatio(
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote
+        uint256 targetBase,
+        uint256 targetQuote
     ) external {
         return swapToRatio(
-        targetRatioBase,
-        targetRatioQuote);
+        targetBase,
+        targetQuote);
     }
 
     function exposed_addLiquidity(

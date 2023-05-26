@@ -1,6 +1,6 @@
 export interface TestCase {
-    targetRatioBase: string;
-    targetRatioQuote: string;
+    targetBase: string;
+    targetQuote: string;
     reserveBase: string;
     reserveQuote: string;
     liquidityBalance: string;
@@ -9,8 +9,8 @@ export interface TestCase {
 }
 
 export const simpleCases = [ {
-    targetRatioBase: "4",
-    targetRatioQuote: "10",
+    targetBase: "4",
+    targetQuote: "10",
     targetRatio: "2.5",
     reserveBase: "518159171586236237881",
     reserveQuote: "1295403443699555742264",
@@ -19,8 +19,8 @@ export const simpleCases = [ {
     leftoverQuote: "414679593716972499639436",
     outcomeRatio: "2.50001064293419387976"
 }, {
-    targetRatioBase: "5",
-    targetRatioQuote: "10",
+    targetBase: "5",
+    targetQuote: "10",
     targetRatio: "2",
     reserveBase: "518159171586236237881",
     reserveQuote: "1036318991263126747732",
@@ -29,8 +29,8 @@ export const simpleCases = [ {
     leftoverQuote: "259084452436428994532",
     outcomeRatio: "2.00000125075592561254"
 }, {
-    targetRatioBase: "4",
-    targetRatioQuote: "10",
+    targetBase: "4",
+    targetQuote: "10",
     targetRatio: "2.5",
     reserveBase: "518159171586236237881",
     reserveQuote: "1294987632131439370305",
@@ -39,8 +39,8 @@ export const simpleCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "2.49920816448564408074"
 }, {
-    targetRatioBase: "10",
-    targetRatioQuote: "8",
+    targetBase: "10",
+    targetQuote: "8",
     targetRatio: "0.8",
     reserveBase: "518159171586236237881",
     reserveQuote: "414528174333587352396",
@@ -49,8 +49,8 @@ export const simpleCases = [ {
     leftoverQuote: "880459457797852017909",
     outcomeRatio: "0.800001615458423325"
 }, {
-    targetRatioBase: "1",
-    targetRatioQuote: "12",
+    targetBase: "1",
+    targetQuote: "12",
     targetRatio: "12",
     reserveBase: "518159171586236237881",
     reserveQuote: "6217887447009125121846",
@@ -59,8 +59,8 @@ export const simpleCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "11.99995636085019877053"
 }, {
-    targetRatioBase: "16",
-    targetRatioQuote: "100",
+    targetBase: "16",
+    targetQuote: "100",
     targetRatio: "6.25",
     reserveBase: "518159171586236237881",
     reserveQuote: "3238499109750901580363",
@@ -71,8 +71,8 @@ export const simpleCases = [ {
 }]
 
 export const realCases = [ {
-    targetRatioBase: "100",
-    targetRatioQuote: "18704",
+    targetBase: "100",
+    targetQuote: "18704",
     targetRatio: "187.04",
     reserveBase: "518159171586236237881",
     reserveQuote: "96916721568881022780188",
@@ -81,8 +81,8 @@ export const realCases = [ {
     leftoverQuote: "319058275591791032601512",
     outcomeRatio: "187.04044410174327783613"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "18431",
+    targetBase: "100",
+    targetQuote: "18431",
     targetRatio: "184.31",
     reserveBase: "518159171586236237881",
     reserveQuote: "95501933004890564945817",
@@ -91,8 +91,8 @@ export const realCases = [ {
     leftoverQuote: "1414788563990457834371",
     outcomeRatio: "184.31003105190884624566"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "18059",
+    targetBase: "100",
+    targetQuote: "18059",
     targetRatio: "180.59",
     reserveBase: "518159171586236237881",
     reserveQuote: "93574371654405949229936",
@@ -101,8 +101,8 @@ export const realCases = [ {
     leftoverQuote: "1927561350484615715881",
     outcomeRatio: "180.59001323463507562309"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16299",
+    targetBase: "100",
+    targetQuote: "16299",
     targetRatio: "162.99",
     reserveBase: "518159171586236237881",
     reserveQuote: "84454794772253825232306",
@@ -111,8 +111,8 @@ export const realCases = [ {
     leftoverQuote: "9119576882152123997630",
     outcomeRatio: "162.99006059028750704069"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16255",
+    targetBase: "100",
+    targetQuote: "16255",
     targetRatio: "162.55",
     reserveBase: "518159171586236237881",
     reserveQuote: "84227120133538600226913",
@@ -121,8 +121,8 @@ export const realCases = [ {
     leftoverQuote: "227674638715225005393",
     outcomeRatio: "162.55066927734741841464"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16067",
+    targetBase: "100",
+    targetQuote: "16067",
     targetRatio: "160.67",
     reserveBase: "518159171586236237881",
     reserveQuote: "83252641021504904310032",
@@ -131,8 +131,8 @@ export const realCases = [ {
     leftoverQuote: "974479112033695916881",
     outcomeRatio: "160.67001336026593291238"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "15375",
+    targetBase: "100",
+    targetQuote: "15375",
     targetRatio: "153.75",
     reserveBase: "518159171586236237881",
     reserveQuote: "79666986707715537732985",
@@ -141,8 +141,8 @@ export const realCases = [ {
     leftoverQuote: "3585654313789366577047",
     outcomeRatio: "153.7500271660379436439"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16019",
+    targetBase: "100",
+    targetQuote: "16019",
     targetRatio: "160.19",
     reserveBase: "518159171586236237881",
     reserveQuote: "83003904172973023553244",
@@ -151,8 +151,8 @@ export const realCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "160.1899739010194145676"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16431",
+    targetBase: "100",
+    targetQuote: "16431",
     targetRatio: "164.31",
     reserveBase: "518159171586236237881",
     reserveQuote: "85138722237327137887260",
@@ -161,8 +161,8 @@ export const realCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "164.30997829623028010551"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16183",
+    targetBase: "100",
+    targetQuote: "16183",
     targetRatio: "161.83",
     reserveBase: "518159171586236237881",
     reserveQuote: "83853705341224117596577",
@@ -171,8 +171,8 @@ export const realCases = [ {
     leftoverQuote: "1285016896103020290683",
     outcomeRatio: "161.83001274400583705831"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16031",
+    targetBase: "100",
+    targetQuote: "16031",
     targetRatio: "160.31",
     reserveBase: "518159171586236237881",
     reserveQuote: "83066105621871373141071",
@@ -181,8 +181,8 @@ export const realCases = [ {
     leftoverQuote: "787599719352744455506",
     outcomeRatio: "160.31001703121806149032"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16061",
+    targetBase: "100",
+    targetQuote: "16061",
     targetRatio: "160.61",
     reserveBase: "518159171586236237881",
     reserveQuote: "83221306986315472498295",
@@ -191,8 +191,8 @@ export const realCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "160.60954152669110840826"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16061",
+    targetBase: "100",
+    targetQuote: "16061",
     targetRatio: "160.61",
     reserveBase: "518159171586236237881",
     reserveQuote: "83221303314093061821657",
@@ -201,8 +201,8 @@ export const realCases = [ {
     leftoverQuote: "3672222410676638",
     outcomeRatio: "160.60953443963637301702"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16120",
+    targetBase: "100",
+    targetQuote: "16120",
     targetRatio: "161.2",
     reserveBase: "518159171586236237881",
     reserveQuote: "83526798285960865578242",
@@ -211,8 +211,8 @@ export const realCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "161.19911190660003712326"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "17006",
+    targetBase: "100",
+    targetQuote: "17006",
     targetRatio: "170.06",
     reserveBase: "518159171586236237881",
     reserveQuote: "88118133236240767234948",
@@ -221,8 +221,8 @@ export const realCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "170.05997011784135755248"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "17179",
+    targetBase: "100",
+    targetQuote: "17179",
     targetRatio: "171.79",
     reserveBase: "518159171586236237881",
     reserveQuote: "89013207267630637283422",
@@ -231,8 +231,8 @@ export const realCases = [ {
     leftoverQuote: "0",
     outcomeRatio: "171.78738146260205642362"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16915",
+    targetBase: "100",
+    targetQuote: "16915",
     targetRatio: "169.15",
     reserveBase: "518159171586236237881",
     reserveQuote: "87646643358157104015825",
@@ -241,8 +241,8 @@ export const realCases = [ {
     leftoverQuote: "1366563909473533267597",
     outcomeRatio: "169.15003760301141583771"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "16854",
+    targetBase: "100",
+    targetQuote: "16854",
     targetRatio: "168.54",
     reserveBase: "518159171586236237881",
     reserveQuote: "87331028925818250881362",
@@ -251,8 +251,8 @@ export const realCases = [ {
     leftoverQuote: "315614432338853134463",
     outcomeRatio: "168.54093049916016994819"
 }, {
-    targetRatioBase: "100",
-    targetRatioQuote: "17208",
+    targetBase: "100",
+    targetQuote: "17208",
     targetRatio: "172.08",
     reserveBase: "518159171586236237881",
     reserveQuote: "89164824555070726128919",

@@ -32,7 +32,7 @@ describe("Calibrator", () => {
     async function estimate(
         testCase: TestCase
     ) {
-        const { targetRatioBase, targetRatioQuote } = testCase;
+        const { targetBase, targetQuote } = testCase;
 
         let liquidityBalance = await pair.balanceOf(wallet.address);
 
@@ -50,14 +50,14 @@ describe("Calibrator", () => {
             reserveBase,
             reserveQuote
         } = await calibrator.estimate(
-            targetRatioBase,
-            targetRatioQuote
+            targetBase,
+            targetQuote
         );
 
         return {
-            targetRatioBase,
-            targetRatioQuote,
-            targetRatio: (new BN(targetRatioQuote)).div(new BN(targetRatioBase)).toString(),
+            targetBase,
+            targetQuote,
+            targetRatio: (new BN(targetQuote)).div(new BN(targetBase)).toString(),
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveQuote.toString(),
             liquidityBalance: leftoverLiquidity.toString(),
@@ -68,7 +68,7 @@ describe("Calibrator", () => {
     }
 
     async function calibrate(testCase: TestCase) {
-        const { targetRatioBase, targetRatioQuote } = testCase;
+        const { targetBase, targetQuote } = testCase;
 
         let liquidityBalance = await pair.balanceOf(wallet.address);
 
@@ -81,8 +81,8 @@ describe("Calibrator", () => {
         await tokenQuote.approve(calibrator.address, quoteBalanceOld);
 
         await calibrator.setRatio(
-            targetRatioBase,
-            targetRatioQuote
+            targetBase,
+            targetQuote
         );
 
         const quoteBalanceNew = await tokenQuote.balanceOf(wallet.address);
@@ -107,9 +107,9 @@ describe("Calibrator", () => {
         liquidityBalance = await pair.balanceOf(wallet.address)
 
         return {
-            targetRatioBase,
-            targetRatioQuote,
-            targetRatio: (new BN(targetRatioQuote)).div(new BN(targetRatioBase)).toString(),
+            targetBase,
+            targetQuote,
+            targetRatio: (new BN(targetQuote)).div(new BN(targetBase)).toString(),
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveQuote.toString(),
             liquidityBalance: liquidityBalance.toString(),

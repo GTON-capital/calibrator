@@ -26,14 +26,14 @@ contract EstimatorTestHarness is Calibrator {
     function exposed_swapToRatioDryrun(
         Estimation memory estimation,
         EstimationContext memory context,
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote,
+        uint256 targetBase,
+        uint256 targetQuote,
         uint256 feeNumerator,
         uint256 feeDenominator
     ) external pure returns (Estimation memory, EstimationContext memory) {
         return swapToRatioDryrun(estimation, context,
-        targetRatioBase,
-        targetRatioQuote,
+        targetBase,
+        targetQuote,
         feeNumerator,
         feeDenominator);
     }
@@ -108,16 +108,16 @@ contract CalibratorTest is Test {
         estimation.reserveQuote = 10;
         Estimator.EstimationContext memory context;
         context.availableQuote = 10;
-        uint256 targetRatioBase = 5;
-        uint256 targetRatioQuote = 10;
+        uint256 targetBase = 5;
+        uint256 targetQuote = 10;
         uint256 feeNumerator = 1;
         uint256 feeDenominator = 1;
 
         (estimation, context) = estimator.exposed_swapToRatioDryrun(
             estimation,
             context,
-            targetRatioBase,
-            targetRatioQuote,
+            targetBase,
+            targetQuote,
             feeNumerator,
             feeDenominator);
 

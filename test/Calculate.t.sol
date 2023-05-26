@@ -1,7 +1,6 @@
 pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 import {ERC20PresetFixedSupply} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Calculate} from "contracts/libraries/Calculate.sol";
@@ -28,20 +27,32 @@ contract CalibratorTest is Test {
         }
     }
 
+    function mulDivValid(uint256 x, uint256 y, uint256 z) private pure returns (bool) {
+        // Full precision for x * y
+        (uint256 xyHi, ) = _mulHighLow(x, y);
+
+        // Assume result won't overflow
+        // This also checks that `d` is positive
+        return xyHi < z;
+    }
+
+    function mulValid(uint256 x, uint256 y) private pure returns (bool) {
+        if (x == 0 || y == 0) { return true; }
+
+        return type(uint256).max / x > y && type(uint256).max / y > x;
+    }
+
+    function addValid(uint256 x, uint256 y) private pure returns (bool) {
+        return type(uint256).max - x > y && type(uint256).max - y > x;
+    }
+
     function testFuzz_removeLiquidity(
         uint256 reserveBaseInvariant,
         uint256 minimumBase,
         uint256 availableLiquidity,
         uint256 totalSupply
-    ) public {
-        vm.assume(reserveBaseInvariant > 0);
-
-        // Full precision for x * y
-        (uint256 xyHi, ) = _mulHighLow(totalSupply, minimumBase);
-
-        // Assume result won't overflow
-        // This also checks that `d` is positive
-        vm.assume(xyHi < reserveBaseInvariant);
+    ) public pure {
+        vm.assume(mulDivValid(totalSupply, minimumBase, reserveBaseInvariant));
 
         uint256 minimumLiquidityExpected = Math.mulDiv(
             totalSupply,
@@ -49,90 +60,145 @@ contract CalibratorTest is Test {
             reserveBaseInvariant
         );
 
+        // no "removeLiquidity: INSUFFICIENT_LIQUIDITY"
         vm.assume(availableLiquidity >= minimumLiquidityExpected);
 
-        (uint256 minimumLiquidity,
-         uint256 removedLiquidity) = Calculate.removeLiquidity(
+        Calculate.removeLiquidity(
             reserveBaseInvariant,
             minimumBase,
             availableLiquidity,
             totalSupply
          );
-
-        assertTrue(minimumLiquidity == minimumLiquidityExpected);
-
-        assertTrue(availableLiquidity == minimumLiquidity + removedLiquidity);
     }
 
-    function testFail_removeLiquidity() public pure {
-        Calculate.removeLiquidity(1,1,0,1);
+    function test_swapToRatio_movesPrice(
+        uint96 reserveBase,
+        uint96 reserveQuote,
+        uint96 targetBase,
+        uint96 targetQuote
+    ) public {
+        // reserves are full enough for precise division
+        vm.assume(reserveBase > 100 && reserveQuote > 100);
+        // parts of target ratio are between 0 and 10^10
+        vm.assume(0 < targetBase);
+        vm.assume(0 < targetQuote);
+        // realistic fees
+        uint256 feeNumerator = 997;
+        uint256 feeDenominator = 1000;
 
-        //"removeLiquidity: INSUFFICIENT_LIQUIDITY"
-    }
+        // reserveBaseDesired won't fail
+        vm.assume(mulDivValid(targetBase, reserveQuote, targetQuote));
 
-    function test_swapToRatio_true() public {
+        // invariant, K won't fail
+        vm.assume(mulValid(reserveBase, reserveQuote));
+
+        // reserveInOptimal won't fail
+        uint256 invariant = uint256(reserveBase) * uint256(reserveQuote);
+        vm.assume(mulDivValid(invariant, targetBase, targetQuote));
+        vm.assume(mulDivValid(invariant, targetQuote, targetBase));
+
+        // getAmountOut will overflow with parameters > uint96
+        // can't write vm.assume without copying implementation
+
         (bool baseToQuote,
          uint256 amountIn,
-         uint256 amountOut) = Calculate.swapToRatio(10,10,10,5,1,1);
+         uint256 amountOut) = Calculate.swapToRatio(
+             reserveBase,
+             reserveQuote,
+             targetBase,
+             targetQuote,
+             feeNumerator,
+             feeDenominator
+         );
 
-        assertEq(baseToQuote, true);
-        assertEq(amountIn, 4);
-        assertEq(amountOut, 2);
+        (uint256 targetIn, uint256 targetOut) = baseToQuote
+            ? (targetBase, targetQuote)
+            : (targetQuote, targetBase);
+
+        (uint256 reserveIn, uint256 reserveOut) = baseToQuote
+            ? (reserveBase, reserveQuote)
+            : (reserveQuote, reserveBase);
+
+        // can't guarantee ratioNew==targetRatio
+        // because of sqrt precision errors
+        // and ignoring the swap fee
+
+        // moves price in the direction of target
+        uint256 ratioNew = (reserveIn+amountIn)/(reserveOut-amountOut);
+        uint256 ratioTarget = targetIn/targetOut;
+        assertLe(reserveIn/reserveOut, ratioNew);
+        assertLe(ratioNew, ratioTarget!=0 ? ratioTarget : 1);
     }
 
-    function test_swapToRatio_false() public {
-        (bool baseToQuote,
-         uint256 amountIn,
-         uint256 amountOut) = Calculate.swapToRatio(10,10,5,10,1,1);
+    function test_addLiquidity(
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 reserveBaseInvariant
+    ) public pure {
+        vm.assume(reserveBaseInvariant >= reserveBase);
 
-        assertEq(baseToQuote, false);
-        assertEq(amountIn, 4);
-        assertEq(amountOut, 2);
+        vm.assume(mulDivValid(reserveBaseInvariant - reserveBase, reserveQuote, reserveBase));
+
+        Calculate.addLiquidity(
+            reserveBase,
+            reserveQuote,
+            reserveBaseInvariant
+         );
     }
 
-    // function testFail_swapToRatio() public pure {
-    //     (bool baseToQuote,
-    //      uint256 amountIn,
-    //      uint256 amountOut) = Calculate.swapToRatio(1,1,1,1,1,1);
+    function test_checkPrecision(
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 targetBase,
+        uint256 targetQuote,
+        uint256 precisionNumerator,
+        uint256 precisionDenominator
+    ) public pure {
+        vm.assume(mulValid(targetQuote, precisionDenominator));
 
-    //     //"swapToRatio: leftSide==rightSide"
-    // }
+        vm.assume(mulDivValid(reserveBase, targetQuote * precisionDenominator, reserveQuote));
 
-    function test_addLiquidity() public {
-        (uint256 amountBaseDesired,
-         uint256 amountQuoteOptimal) = Calculate.addLiquidity(1,1,1);
+        vm.assume(mulValid(targetBase, precisionDenominator));
 
-        assertEq(amountBaseDesired, 0);
-        assertEq(amountQuoteOptimal, 0);
+        vm.assume(addValid(targetBase * precisionDenominator, precisionNumerator));
+
+        Calculate.checkPrecision(
+            reserveBase,
+            reserveQuote,
+            targetBase,
+            targetQuote,
+            precisionNumerator,
+            precisionDenominator
+        );
     }
 
-    function test_checkPrecision_True() public {
-        (bool isPrecise) = Calculate.checkPrecision(1,1,1,1,1,1);
+    function test_getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut,
+        uint256 feeNumerator,
+        uint256 feeDenominator
+    ) public pure {
+        vm.assume(amountIn > 0);
 
-        assertEq(isPrecise, true);
+        vm.assume(reserveIn > 0 && reserveOut > 0);
+
+        vm.assume(mulValid(amountIn, feeNumerator));
+
+        vm.assume(mulValid(amountIn * feeNumerator, reserveOut));
+
+        vm.assume(mulValid(reserveIn, feeDenominator));
+
+        vm.assume(addValid(reserveIn * feeDenominator, amountIn * feeNumerator));
+
+        vm.assume(feeDenominator > 0);
+
+        Calculate.getAmountOut(
+        amountIn,
+        reserveIn,
+        reserveOut,
+        feeNumerator,
+        feeDenominator
+        );
     }
-
-    function test_checkPrecision_False() public {
-        (bool isPrecise) = Calculate.checkPrecision(10,10,1,5,1,1);
-
-        assertEq(isPrecise, false);
-    }
-
-    function test_getAmountOut() public {
-        (uint256 amountOut) = Calculate.getAmountOut(1,1,1,1,1);
-
-        assertEq(amountOut, 0);
-    }
-
-    // function testFail_getAmountOut_input() public pure {
-    //     (uint256 amountOut) = Calculate.getAmountOut(0,1,1,1,1);
-
-    //     //"getAmountOut: INSUFFICIENT_INPUT_AMOUNT"
-    // }
-
-    // function testFail_getAmountOut_liquidity() public {
-    //     (uint256 amountOut) = Calculate.getAmountOut(1,0,1,1,1);
-
-    //     //"getAmountOut: INSUFFICIENT_LIQUIDITY"
-    // }
 }

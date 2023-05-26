@@ -36,8 +36,8 @@ describe("Calibrator-js", () => {
     }
 
     async function calibrate(
-        targetRatioBase: BN,
-        targetRatioQuote: BN
+        targetBase: BN,
+        targetQuote: BN
     ) {
         const [reserveBaseInvariant] = (await pair.getReserves()).map((n) => new BN(n.toString()));
 
@@ -68,15 +68,15 @@ describe("Calibrator-js", () => {
         /* Swap to price */
         const [reserveBaseBefore, reserveQuoteBefore] = (await pair.getReserves()).map((n) => new BN(n.toString()));
 
-        const targetRatio = targetRatioBase.div(targetRatioQuote);
+        const targetRatio = targetBase.div(targetQuote);
 
         const baseToQuote = reserveBaseBefore.div(reserveQuoteBefore).lt(targetRatio);
 
         const invariant = reserveBaseBefore.times(reserveQuoteBefore);
 
         const leftSide = baseToQuote
-            ? invariant.times(1000).times(targetRatioBase).div(targetRatioQuote.times(997)).sqrt()
-            : invariant.times(1000).times(targetRatioQuote).div(targetRatioBase.times(997)).sqrt();
+            ? invariant.times(1000).times(targetBase).div(targetQuote.times(997)).sqrt()
+            : invariant.times(1000).times(targetQuote).div(targetBase.times(997)).sqrt();
 
         const rightSide = (baseToQuote ? reserveBaseBefore.times(1000) : reserveQuoteBefore.times(1000)).div(997);
 
@@ -108,8 +108,8 @@ describe("Calibrator-js", () => {
         expect(
             reserveBaseAfter.div(reserveQuoteAfter).decimalPlaces(3).toNumber()
         ).to.be.within(
-            targetRatioBase.div(targetRatioQuote).decimalPlaces(3).toNumber() - 0.002,
-            targetRatioBase.div(targetRatioQuote).decimalPlaces(3).toNumber() + 0.002,
+            targetBase.div(targetQuote).decimalPlaces(3).toNumber() - 0.002,
+            targetBase.div(targetQuote).decimalPlaces(3).toNumber() + 0.002,
         );
 
         /* Add liquidity */
@@ -135,40 +135,40 @@ describe("Calibrator-js", () => {
     }
 
     interface TestCase {
-        targetRatioBase: number;
-        targetRatioQuote: number;
+        targetBase: number;
+        targetQuote: number;
         reserveBase: string;
         reserveQuote: string;
         liquidityBalance: string;
     }
 
     const testCases = [
-        { targetRatioBase: 4,
-          targetRatioQuote: 10,
+        { targetBase: 4,
+          targetQuote: 10,
           reserveBase: "518159171586236237881",
           reserveQuote: "1295615469025634442369",
           liquidityBalance: "817641044002851015615"
         },
-        { targetRatioBase: 5,
-          targetRatioQuote: 10,
+        { targetBase: 5,
+          targetQuote: 10,
           reserveBase: "518159171586236237881",
           reserveQuote: "1039108320628187616874",
           liquidityBalance: "732126383632480773524"
         },
-        { targetRatioBase: 4,
-          targetRatioQuote: 10,
+        { targetBase: 4,
+          targetQuote: 10,
           reserveBase: "518159171586236237881",
           reserveQuote: "1291908449006796113524",
           liquidityBalance: "816210684072656639148"
         },
-        { targetRatioBase: 10,
-          targetRatioQuote: 8,
+        { targetBase: 10,
+          targetQuote: 8,
           reserveBase: "518159171586236237881",
           reserveQuote: "415236559090256431065",
           liquidityBalance: "462433455516845328998"
         },
-        { targetRatioBase: 1,
-          targetRatioQuote: 12,
+        { targetBase: 1,
+          targetQuote: 12,
           reserveBase: "518159171586236237881",
           reserveQuote: "6213004732579741960070",
           liquidityBalance: "1786748128884062178228"
@@ -176,11 +176,11 @@ describe("Calibrator-js", () => {
     ]
 
     async function test(testCase: TestCase) {
-        const { targetRatioBase, targetRatioQuote } = testCase;
+        const { targetBase, targetQuote } = testCase;
 
         await calibrate(
-            new BN(targetRatioBase),
-            new BN(targetRatioQuote)
+            new BN(targetBase),
+            new BN(targetQuote)
         );
 
         const [reserveBase, reserveToken] = await pair.getReserves();
@@ -188,8 +188,8 @@ describe("Calibrator-js", () => {
         const liquidityBalance = await pair.balanceOf(wallet.address)
 
         const result = {
-            targetRatioBase,
-            targetRatioQuote,
+            targetBase,
+            targetQuote,
             reserveBase: reserveBase.toString(),
             reserveQuote: reserveToken.toString(),
             liquidityBalance: liquidityBalance.toString()
