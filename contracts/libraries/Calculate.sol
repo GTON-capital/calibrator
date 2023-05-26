@@ -31,8 +31,8 @@ library Calculate {
     function swapToRatio(
         uint256 reserveBase,
         uint256 reserveQuote,
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote,
+        uint256 targetBase,
+        uint256 targetQuote,
         uint256 feeNumerator,
         uint256 feeDenominator
     )
@@ -40,31 +40,41 @@ library Calculate {
         pure
         returns (bool baseToQuote, uint256 amountIn, uint256 amountOut)
     {
-        baseToQuote =
-            Math.mulDiv(reserveBase, targetRatioQuote, reserveQuote) <
-            targetRatioBase;
+        // multiply by 1000 so that targetRatio doesn't round the same as reserveRatio
+        uint256 reserveBaseDesired = Math.mulDiv(targetBase * 1000, reserveQuote, targetQuote);
 
-        uint256 invariant = reserveBase * reserveQuote;
+        if (reserveBaseDesired == reserveBase * 1000) {
+            return (false, 0, 0);
+        }
 
-        uint256 leftSide = Math.sqrt(
+        baseToQuote = reserveBaseDesired > reserveBase * 1000;
+
+        (uint256 targetIn, uint256 targetOut) = baseToQuote
+            ? (targetBase, targetQuote)
+            : (targetQuote, targetBase);
+
+        uint256 reserveInOptimal = Math.sqrt(
             Math.mulDiv(
-                invariant,
-                baseToQuote ? targetRatioBase : targetRatioQuote,
-                (baseToQuote ? targetRatioQuote : targetRatioBase)
+                reserveBase * reserveQuote, // invariant, K
+                targetIn,
+                targetOut
             )
         );
-
-        uint256 rightSide = baseToQuote ? reserveBase : reserveQuote;
-
-        require(leftSide != rightSide, "swapToRatio: leftSide==rightSide");
-
-        amountIn = leftSide < rightSide
-            ? rightSide - leftSide
-            : leftSide - rightSide;
 
         (uint256 reserveIn, uint256 reserveOut) = baseToQuote
             ? (reserveBase, reserveQuote)
             : (reserveQuote, reserveBase);
+
+        if (reserveInOptimal == reserveIn) {
+            return (false, 0, 0);
+        }
+
+        // happens when reverse target ratio rounds
+        // to a larger quotient than reverse reserve ratio
+        // due to precision errors in division and sqrt
+        require(reserveInOptimal > reserveIn, "swapToRatio: reserveInOptimal<reserveIn");
+
+        amountIn = reserveInOptimal - reserveIn;
 
         amountOut = getAmountOut(
             amountIn,
@@ -96,25 +106,25 @@ library Calculate {
     function checkPrecision(
         uint256 reserveBase,
         uint256 reserveQuote,
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote,
+        uint256 targetBase,
+        uint256 targetQuote,
         uint256 precisionNumerator,
         uint256 precisionDenominator
     ) internal pure returns (bool) {
         // base ratio to number of decimal places specified in precisionDenominator
         uint256 ratioBaseDP = Math.mulDiv(
             reserveBase,
-            targetRatioQuote * precisionDenominator,
+            targetQuote * precisionDenominator,
             reserveQuote
         );
 
-        uint256 targetRatioBaseDP = targetRatioBase * precisionDenominator;
+        uint256 targetBaseDP = targetBase * precisionDenominator;
 
-        uint256 lowerBound = targetRatioBaseDP > precisionNumerator
-            ? targetRatioBaseDP - precisionNumerator
+        uint256 lowerBound = targetBaseDP > precisionNumerator
+            ? targetBaseDP - precisionNumerator
             : 0;
 
-        uint256 upperBound = targetRatioBaseDP + precisionNumerator;
+        uint256 upperBound = targetBaseDP + precisionNumerator;
 
         return lowerBound <= ratioBaseDP && ratioBaseDP <= upperBound;
     }

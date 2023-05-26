@@ -24,8 +24,8 @@ abstract contract Estimator is Base {
     }
 
     function estimate(
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote
+        uint256 targetBase,
+        uint256 targetQuote
     ) external view returns (Estimation memory estimation) {
         EstimationContext memory context;
 
@@ -43,8 +43,8 @@ abstract contract Estimator is Base {
             !Calculate.checkPrecision(
                 estimation.reserveBase,
                 estimation.reserveQuote,
-                targetRatioBase,
-                targetRatioQuote,
+                targetBase,
+                targetQuote,
                 precisionNumerator,
                 precisionDenominator
             )
@@ -52,8 +52,8 @@ abstract contract Estimator is Base {
             (estimation, context) = swapToRatioDryrun(
                 estimation,
                 context,
-                targetRatioBase,
-                targetRatioQuote,
+                targetBase,
+                targetQuote,
                 feeNumerator,
                 feeDenominator
             );
@@ -103,8 +103,8 @@ abstract contract Estimator is Base {
     function swapToRatioDryrun(
         Estimation memory estimation,
         EstimationContext memory context,
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote,
+        uint256 targetBase,
+        uint256 targetQuote,
         uint256 feeNumerator,
         uint256 feeDenominator
     ) internal pure returns (Estimation memory, EstimationContext memory) {
@@ -112,8 +112,8 @@ abstract contract Estimator is Base {
             .swapToRatio(
                 estimation.reserveBase,
                 estimation.reserveQuote,
-                targetRatioBase,
-                targetRatioQuote,
+                targetBase,
+                targetQuote,
                 feeNumerator,
                 feeDenominator
             );

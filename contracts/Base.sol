@@ -31,6 +31,8 @@ contract Base is Ownable {
         uint256 _feeNumerator,
         uint256 _feeDenominator
     ) external onlyOwner {
+        require(_feeDenominator > 0, "setFee: feeDenominator>0");
+
         feeNumerator = _feeNumerator;
         feeDenominator = _feeDenominator;
     }
@@ -39,6 +41,8 @@ contract Base is Ownable {
         uint256 _precisionNumerator,
         uint256 _precisionDenominator
     ) external onlyOwner {
+        require(_precisionDenominator > 0, "setPrecision: precisionDenominator>0");
+
         precisionNumerator = _precisionNumerator;
         precisionDenominator = _precisionDenominator;
     }

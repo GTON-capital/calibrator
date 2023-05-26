@@ -17,8 +17,8 @@ contract Calibrator is Base, Estimator {
     ) Base(_pair, _tokenBase, _tokenQuote) {}
 
     function setRatio(
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote
+        uint256 targetBase,
+        uint256 targetQuote
     ) external onlyOwner {
         (uint256 reserveBaseInvariant, ) = getRatio();
 
@@ -30,13 +30,13 @@ contract Calibrator is Base, Estimator {
             !Calculate.checkPrecision(
                 reserveBase,
                 reserveQuote,
-                targetRatioBase,
-                targetRatioQuote,
+                targetBase,
+                targetQuote,
                 precisionNumerator,
                 precisionDenominator
             )
         ) {
-            swapToRatio(targetRatioBase, targetRatioQuote);
+            swapToRatio(targetBase, targetQuote);
 
             (reserveBase, reserveQuote) = getRatio();
         }
@@ -60,8 +60,8 @@ contract Calibrator is Base, Estimator {
     }
 
     function swapToRatio(
-        uint256 targetRatioBase,
-        uint256 targetRatioQuote
+        uint256 targetBase,
+        uint256 targetQuote
     ) internal onlyOwner {
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
@@ -69,8 +69,8 @@ contract Calibrator is Base, Estimator {
             .swapToRatio(
                 reserveBase,
                 reserveQuote,
-                targetRatioBase,
-                targetRatioQuote,
+                targetBase,
+                targetQuote,
                 feeNumerator,
                 feeDenominator
             );
