@@ -69,10 +69,12 @@ function assume_removeLiquidity(
 }
 
 function assume_swapToRatio(
-    uint96 reserveBase,
-    uint96 reserveQuote,
-    uint96 targetBase,
-    uint96 targetQuote,
+    uint256 reserveBase,
+    uint256 reserveQuote,
+    uint256 targetBase,
+    uint256 targetQuote,
+    uint256 feeNumerator,
+    uint256 feeDenominator,
     function(bool) external assume
 ) {
     // reserves are full enough for precise division
@@ -82,18 +84,47 @@ function assume_swapToRatio(
     assume(targetBase > 0 && targetQuote > 0);
 
     // reserveBaseDesired won't fail
-    assume(mulDivValid(targetBase, reserveQuote, targetQuote));
+    assume(mulValid(targetBase, 1000));
+    assume(mulDivValid(targetBase * 1000, reserveQuote, targetQuote));
+
+    uint256 reserveBaseDesired = Math.mulDiv(
+        targetBase * 1000,
+        reserveQuote,
+        targetQuote
+    );
+
+    assume(mulValid(reserveBase, 1000));
+    bool baseToQuote = reserveBaseDesired > reserveBase * 1000;
 
     // invariant, K won't fail
     assume(mulValid(reserveBase, reserveQuote));
 
     // reserveInOptimal won't fail
-    uint256 invariant = uint256(reserveBase) * uint256(reserveQuote);
+    uint256 invariant = reserveBase * reserveQuote;
+
     assume(mulDivValid(invariant, targetBase, targetQuote));
     assume(mulDivValid(invariant, targetQuote, targetBase));
 
-    // getAmountOut will overflow with parameters > uint96
-    // can't write vm.assume without copying implementation
+    uint256 reserveInOptimal = Math.sqrt(
+        Math.mulDiv(
+            invariant, // invariant, K
+            baseToQuote ? targetBase : targetQuote,
+            baseToQuote ? targetQuote : targetBase
+        )
+    );
+
+    (uint256 reserveIn, uint256 reserveOut) = baseToQuote
+        ? (reserveBase, reserveQuote)
+        : (reserveQuote, reserveBase);
+
+    assume_getAmountOut(
+        reserveInOptimal - reserveIn,
+        reserveIn,
+        reserveOut,
+        feeNumerator,
+        feeDenominator,
+        assume
+    );
 }
 
 function assume_addLiquidity(
@@ -194,20 +225,19 @@ function assume_removeLiquidityDryrun(
 function assume_swapToRatioDryrun(
     Estimator.Estimation memory estimation,
     Estimator.EstimationContext memory context,
-    uint96 targetBase,
-    uint96 targetQuote,
+    uint256 targetBase,
+    uint256 targetQuote,
     uint256 feeNumerator,
     uint256 feeDenominator,
     function(bool) external assume
 ) {
-    assume(estimation.reserveBase < type(uint96).max);
-    assume(estimation.reserveQuote < type(uint96).max);
-
     assume_swapToRatio(
-        uint96(estimation.reserveBase),
-        uint96(estimation.reserveQuote),
+        estimation.reserveBase,
+        estimation.reserveQuote,
         targetBase,
         targetQuote,
+        feeNumerator,
+        feeDenominator,
         assume
     );
 
@@ -277,4 +307,52 @@ function assume_addLiquidityDryrun(
     assume(addValid(estimation.reserveQuote, addedQuoteExpected));
 
     assume(addValid(context.minimumLiquidity, mintedLiquidityExpected));
+}
+
+function assume_estimate(
+    uint256 reserveBaseInvariant,
+    uint256 availableQuote,
+    uint256 targetBase,
+    uint256 targetQuote,
+    function(bool) external assume
+) {
+    assume(targetBase > 0 && targetQuote > 0);
+
+    // swapToRatioDryrun: not enough base
+    assume(targetBase <= reserveBaseInvariant);
+
+    assume(mulDivValid(targetQuote, reserveBaseInvariant, targetBase));
+
+    uint256 reserveQuoteDesired = Math.mulDiv(
+        targetQuote,
+        reserveBaseInvariant,
+        targetBase
+    );
+
+    // swapToRatioDryrun: not enough quote
+    assume(availableQuote >= reserveQuoteDesired);
+}
+
+function assume_estimate_fail(
+    uint256 reserveBaseInvariant,
+    uint256 availableQuote,
+    uint256 targetBase,
+    uint256 targetQuote,
+    function(bool) external assume
+) {
+    assume(targetBase > 0 && targetQuote > 0);
+
+    // swapToRatioDryrun: not enough base
+    assume(targetBase <= reserveBaseInvariant);
+
+    assume(mulDivValid(targetQuote, reserveBaseInvariant, targetBase));
+
+    uint256 reserveQuoteDesired = Math.mulDiv(
+        targetQuote,
+        reserveBaseInvariant,
+        targetBase
+    );
+
+    // swapToRatioDryrun: not enough quote
+    assume(availableQuote < reserveQuoteDesired);
 }

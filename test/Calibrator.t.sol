@@ -4,8 +4,18 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {ERC20PresetFixedSupply} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol";
 import {Calibrator} from "../contracts/Calibrator.sol";
+import {Estimator} from "../contracts/Estimator.sol";
+import {Calculate} from "../contracts/libraries/Calculate.sol";
 import {IFactory} from "../contracts/interfaces/IFactory.sol";
 import {IPair} from "../contracts/interfaces/IPair.sol";
+// prettier-ignore
+import {
+    assume_removeLiquidity,
+    assume_swapToRatio,
+    assume_addLiquidity,
+    assume_estimate,
+        assume_estimate_fail
+} from "test/shared/Assume.sol";
 
 contract CalibratorTestHarness is Calibrator {
     constructor(
@@ -21,7 +31,7 @@ contract CalibratorTestHarness is Calibrator {
     function exposed_swapToRatio(
         uint256 targetBase,
         uint256 targetQuote
-    ) external {
+    ) external returns (bool) {
         return swapToRatio(targetBase, targetQuote);
     }
 
@@ -83,6 +93,15 @@ contract CalibratorTest is Test {
             address(tokenBase),
             address(tokenQuote)
         );
+
+        calibrator.setVault(address(this));
+
+        pair.approve(address(calibrator), pair.balanceOf(address(this)));
+
+        tokenQuote.approve(
+            address(calibrator),
+            tokenQuote.balanceOf(address(this))
+        );
     }
 
     function test_setRatio() public {
@@ -95,18 +114,119 @@ contract CalibratorTest is Test {
 
         assertEq(reserveBase, 2474195218611459158903569);
     }
-    // TODO: negative test, liquidity not approved
-    // [FAIL. Reason: ds-math-sub-underflow] test_setRatio()
 
-    // TODO: negative test, quote not approved
-    // [FAIL. Reason: ERC20: insufficient allowance] test_setRatio()
+    function testFuzz_removeLiquidity(uint256 reserveBaseInvariant) public {
+        assume_removeLiquidity(
+            reserveBaseInvariant,
+            calibrator.minimumBase(),
+            pair.balanceOf(address(this)),
+            pair.totalSupply(),
+            vm.assume
+        );
 
-    // function test_removeLiquidity() public {
-    // }
+        calibrator.exposed_removeLiquidity(reserveBaseInvariant);
+    }
 
-    // function test_swapToRatio() public {
-    // }
+    function test_swapToRatio(uint256 targetBase, uint256 targetQuote) public {
+        (uint256 reserveBase, uint256 reserveQuote) = calibrator.getRatio();
 
-    // function test_addLiquidity() public {
-    // }
+        assume_swapToRatio(
+            reserveBase,
+            reserveQuote,
+            targetBase,
+            targetQuote,
+            calibrator.feeNumerator(),
+            calibrator.feeDenominator(),
+            vm.assume
+        );
+
+        (bool baseToQuote, uint256 amountIn, ) = Calculate.swapToRatio(
+            reserveBase,
+            reserveQuote,
+            targetBase,
+            targetQuote,
+            calibrator.feeNumerator(),
+            calibrator.feeDenominator()
+        );
+
+        uint256 availableIn = baseToQuote
+            ? tokenBase.balanceOf(address(calibrator))
+            : tokenQuote.balanceOf(address(calibrator)) +
+                tokenQuote.balanceOf(address(this));
+
+        vm.assume(availableIn > amountIn);
+
+        calibrator.exposed_swapToRatio(targetBase, targetQuote);
+    }
+
+    function testFuzz_addLiquidity(uint256 reserveBaseInvariant) public {
+        (uint256 reserveBase, uint256 reserveQuote) = calibrator.getRatio();
+
+        assume_addLiquidity(
+            reserveBase,
+            reserveQuote,
+            reserveBaseInvariant,
+            vm.assume
+        );
+
+        tokenBase.transfer(
+            address(calibrator),
+            tokenBase.balanceOf(address(this))
+        );
+
+        tokenQuote.transfer(
+            address(calibrator),
+            tokenQuote.balanceOf(address(this))
+        );
+
+        (uint256 addedBase, uint256 addedQuote) = Calculate.addLiquidity(
+            reserveBase,
+            reserveQuote,
+            reserveBaseInvariant
+        );
+
+        vm.assume(addedBase <= tokenBase.balanceOf(address(calibrator)));
+
+        vm.assume(addedQuote <= tokenQuote.balanceOf(address(calibrator)));
+
+        calibrator.exposed_addLiquidity(reserveBaseInvariant);
+    }
+
+    function testFuzz_setRatio(uint256 targetBase, uint256 targetQuote) public {
+        (uint256 reserveBase, ) = calibrator.getRatio();
+
+        uint256 availableQuote = tokenQuote.balanceOf(address(this)) +
+            tokenQuote.balanceOf(address(pair));
+
+        // ERC20: insufficient allowance
+        assume_estimate(
+            reserveBase,
+            availableQuote,
+            targetBase,
+            targetQuote,
+            vm.assume
+        );
+
+        calibrator.setRatio(targetBase, targetQuote);
+    }
+
+    function testFailFuzz_setRatio(
+        uint256 targetBase,
+        uint256 targetQuote
+    ) public {
+        (uint256 reserveBase, ) = calibrator.getRatio();
+
+        uint256 availableQuote = tokenQuote.balanceOf(address(this)) +
+            tokenQuote.balanceOf(address(pair));
+
+        assume_estimate_fail(
+            reserveBase,
+            availableQuote,
+            targetBase,
+            targetQuote,
+            vm.assume
+        );
+
+        calibrator.setRatio(targetBase, targetQuote);
+    }
 }

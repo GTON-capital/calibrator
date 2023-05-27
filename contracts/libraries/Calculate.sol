@@ -101,6 +101,7 @@ library Calculate {
         pure
         returns (uint256 amountBaseDesired, uint256 amountQuoteOptimal)
     {
+        // assume that reserveBase is always smaller than invariant after removeLiqudity
         amountBaseDesired = reserveBaseInvariant - reserveBase;
 
         amountQuoteOptimal = Math.mulDiv(

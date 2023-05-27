@@ -36,10 +36,10 @@ contract CalculateTest is Test {
     }
 
     function testFuzz_swapToRatio_movesPrice(
-        uint96 reserveBase,
-        uint96 reserveQuote,
-        uint96 targetBase,
-        uint96 targetQuote
+        uint256 reserveBase,
+        uint256 reserveQuote,
+        uint256 targetBase,
+        uint256 targetQuote
     ) public {
         // realistic fees
         uint256 feeNumerator = 997;
@@ -50,6 +50,8 @@ contract CalculateTest is Test {
             reserveQuote,
             targetBase,
             targetQuote,
+            feeNumerator,
+            feeDenominator,
             vm.assume
         );
 
@@ -71,15 +73,19 @@ contract CalculateTest is Test {
             ? (reserveBase, reserveQuote)
             : (reserveQuote, reserveBase);
 
-        // can't guarantee ratioNew==targetRatio
+        // NOTE: can't guarantee ratioNew==targetRatio
         // because of sqrt precision errors
         // and ignoring the swap fee
 
-        // moves price in the direction of target
+        uint256 ratioOld = reserveIn / reserveOut;
+
         uint256 ratioNew = (reserveIn + amountIn) / (reserveOut - amountOut);
+
         uint256 ratioTarget = targetIn / targetOut;
-        assertLe(reserveIn / reserveOut, ratioNew);
-        assertLe(ratioNew, ratioTarget != 0 ? ratioTarget : 1);
+
+        // moves price in the direction of target
+        assertLe(ratioOld, ratioNew);
+        assertLe(ratioNew, ratioTarget);
     }
 
     function testFuzz_addLiquidity(

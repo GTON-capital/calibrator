@@ -7,7 +7,13 @@ import {Calibrator} from "../contracts/Calibrator.sol";
 import {Estimator} from "../contracts/Estimator.sol";
 import {IFactory} from "../contracts/interfaces/IFactory.sol";
 import {IPair} from "../contracts/interfaces/IPair.sol";
-import {assume_removeLiquidityDryrun, assume_swapToRatioDryrun, assume_addLiquidityDryrun} from "test/shared/Assume.sol";
+// prettier-ignore
+import {
+    assume_removeLiquidityDryrun,
+    assume_swapToRatioDryrun,
+    assume_addLiquidityDryrun,
+    assume_estimate
+} from "test/shared/Assume.sol";
 
 contract EstimatorTestHarness is Calibrator {
     constructor(
@@ -180,8 +186,8 @@ contract CalibratorTest is Test {
     function testFuzz_swapToRatioDryrun(
         Estimator.Estimation memory estimation,
         Estimator.EstimationContext memory context,
-        uint96 targetBase,
-        uint96 targetQuote
+        uint256 targetBase,
+        uint256 targetQuote
     ) public {
         // realistic fees
         uint256 feeNumerator = 997;
@@ -233,11 +239,19 @@ contract CalibratorTest is Test {
         );
     }
 
-    function testFuzz_estimate(
-        uint8 targetBase,
-        uint8 targetQuote
-    ) public view {
-        vm.assume(targetBase > 0 && targetQuote > 0);
+    function testFuzz_estimate(uint256 targetBase, uint256 targetQuote) public {
+        (uint256 reserveBase, ) = estimator.getRatio();
+
+        uint256 availableQuote = tokenQuote.balanceOf(address(this)) +
+            tokenQuote.balanceOf(address(pair));
+
+        assume_estimate(
+            reserveBase,
+            availableQuote,
+            targetBase,
+            targetQuote,
+            vm.assume
+        );
 
         estimator.estimate(targetBase, targetQuote);
     }

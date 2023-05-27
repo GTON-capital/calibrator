@@ -19,14 +19,18 @@ contract Calibrator is Base, Estimator {
 
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
-        while (
-            !Calculate.checkPrecision(
-                reserveBase, reserveQuote, targetBase, targetQuote, precisionNumerator, precisionDenominator
-            )
-        ) {
-            swapToRatio(targetBase, targetQuote);
+        bool isIdle;
+        bool isPrecise;
+
+        while (!isIdle && !isPrecise) {
+
+            isIdle = swapToRatio(targetBase, targetQuote);
 
             (reserveBase, reserveQuote) = getRatio();
+
+            isPrecise = Calculate.checkPrecision(
+                reserveBase, reserveQuote, targetBase, targetQuote, precisionNumerator, precisionDenominator
+            );
         }
 
         addLiquidity(reserveBaseInvariant);
@@ -43,11 +47,16 @@ contract Calibrator is Base, Estimator {
         pair.burn(address(this));
     }
 
-    function swapToRatio(uint256 targetBase, uint256 targetQuote) internal onlyOwner {
+    function swapToRatio(uint256 targetBase, uint256 targetQuote) internal onlyOwner returns (bool) {
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
 
         (bool baseToQuote, uint256 amountIn, uint256 amountOut) =
             Calculate.swapToRatio(reserveBase, reserveQuote, targetBase, targetQuote, feeNumerator, feeDenominator);
+
+        // when reserves are small and desired ratio change is small, no swap is possible
+        if (amountIn == 0 || amountOut == 0) {
+            return true;
+        }
 
         IERC20 tokenIn = baseToQuote ? tokenBase : tokenQuote;
 
@@ -67,10 +76,14 @@ contract Calibrator is Base, Estimator {
             address(tokenIn) == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
 
         pair.swap(amount0Out, amount1Out, address(this), new bytes(0));
+
+        return false;
     }
 
     function addLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
         (uint256 reserveBase, uint256 reserveQuote) = getRatio();
+
+        if (reserveBase == reserveBaseInvariant) return;
 
         (uint256 addedBase, uint256 addedQuote) =
             Calculate.addLiquidity(reserveBase, reserveQuote, reserveBaseInvariant);
