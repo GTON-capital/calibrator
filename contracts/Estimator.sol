@@ -36,18 +36,20 @@ abstract contract Estimator is Base {
 
         (estimation, context) = removeLiquidityDryrun(estimation, context, minimumBase);
 
-        while (
-            !Calculate.checkPrecision(
+        bool isIdle;
+        bool isPrecise;
+
+        while (!isIdle && !isPrecise) {
+            (estimation, context, isIdle) =
+                swapToRatioDryrun(estimation, context, targetBase, targetQuote, feeNumerator, feeDenominator);
+
+            isPrecise = Calculate.checkPrecision(
                 estimation.reserveBase,
                 estimation.reserveQuote,
                 targetBase,
                 targetQuote,
                 precisionNumerator,
-                precisionDenominator
-            )
-        ) {
-            (estimation, context) =
-                swapToRatioDryrun(estimation, context, targetBase, targetQuote, feeNumerator, feeDenominator);
+                precisionDenominator);
         }
 
         estimation = addLiquidityDryrun(estimation, context, reserveBaseInvariant);
@@ -83,26 +85,31 @@ abstract contract Estimator is Base {
         uint256 targetQuote,
         uint256 feeNumerator,
         uint256 feeDenominator
-    ) internal pure returns (Estimation memory, EstimationContext memory) {
+    ) internal pure returns (Estimation memory, EstimationContext memory, bool) {
         (bool baseToQuote, uint256 amountIn, uint256 amountOut) = Calculate.swapToRatio(
             estimation.reserveBase, estimation.reserveQuote, targetBase, targetQuote, feeNumerator, feeDenominator
         );
 
+        // when reserves are small and desired ratio change is small, no swap is possible
+        if (amountIn == 0 && amountOut == 0) {
+            return (estimation, context, true);
+        }
+
         if (baseToQuote) {
-            require(context.availableBase > amountIn, "swapToRatioDryrun: not enough base for swap");
+            require(context.availableBase > amountIn, "swapToRatioDryrun: not enough base");
             context.availableBase = context.availableBase - amountIn;
             estimation.reserveBase = estimation.reserveBase + amountIn;
             estimation.reserveQuote = estimation.reserveQuote - amountOut;
             context.availableQuote = context.availableQuote + amountOut;
         } else {
-            require(context.availableQuote > amountIn, "swapToRatioDryrun: not enough quote for swap");
+            require(context.availableQuote > amountIn, "swapToRatioDryrun: not enough quote");
             context.availableQuote = context.availableQuote - amountIn;
             estimation.reserveQuote = estimation.reserveQuote + amountIn;
             estimation.reserveBase = estimation.reserveBase - amountOut;
             context.availableBase = context.availableBase + amountOut;
         }
 
-        return (estimation, context);
+        return (estimation, context, false);
     }
 
     function addLiquidityDryrun(

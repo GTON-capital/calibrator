@@ -7,6 +7,7 @@ import {Calibrator} from "../contracts/Calibrator.sol";
 import {Estimator} from "../contracts/Estimator.sol";
 import {IFactory} from "../contracts/interfaces/IFactory.sol";
 import {IPair} from "../contracts/interfaces/IPair.sol";
+import {assume_removeLiquidityDryrun, assume_swapToRatioDryrun, assume_addLiquidityDryrun} from "test/shared/Assume.sol";
 
 contract EstimatorTestHarness is Calibrator {
     constructor(
@@ -30,7 +31,11 @@ contract EstimatorTestHarness is Calibrator {
         uint256 targetQuote,
         uint256 feeNumerator,
         uint256 feeDenominator
-    ) external pure returns (Estimation memory, EstimationContext memory) {
+    )
+        external
+        pure
+        returns (Estimation memory, EstimationContext memory, bool)
+    {
         return
             swapToRatioDryrun(
                 estimation,
@@ -141,7 +146,7 @@ contract CalibratorTest is Test {
         uint256 feeNumerator = 1;
         uint256 feeDenominator = 1;
 
-        (estimation, context) = estimator.exposed_swapToRatioDryrun(
+        (estimation, context, ) = estimator.exposed_swapToRatioDryrun(
             estimation,
             context,
             targetBase,
@@ -153,6 +158,87 @@ contract CalibratorTest is Test {
         assertTrue(estimation.baseToQuote == false);
     }
 
-    // function test_addLiquidityDryrun() public {
-    // }
+    function testFuzz_removeLiquidityDryrun(
+        Estimator.Estimation memory estimation,
+        Estimator.EstimationContext memory context,
+        uint256 minimumBase
+    ) public {
+        assume_removeLiquidityDryrun(
+            estimation,
+            context,
+            minimumBase,
+            vm.assume
+        );
+
+        (estimation, context) = estimator.exposed_removeLiquidityDryrun(
+            estimation,
+            context,
+            minimumBase
+        );
+    }
+
+    function testFuzz_swapToRatioDryrun(
+        Estimator.Estimation memory estimation,
+        Estimator.EstimationContext memory context,
+        uint96 targetBase,
+        uint96 targetQuote
+    ) public {
+        // realistic fees
+        uint256 feeNumerator = 997;
+        uint256 feeDenominator = 1000;
+
+        assume_swapToRatioDryrun(
+            estimation,
+            context,
+            targetBase,
+            targetQuote,
+            feeNumerator,
+            feeDenominator,
+            vm.assume
+        );
+
+        vm.assume(
+            estimation.reserveBase / estimation.reserveQuote !=
+                targetBase / targetQuote ||
+                estimation.reserveQuote / estimation.reserveBase !=
+                targetQuote / targetBase
+        );
+
+        (estimation, context, ) = estimator.exposed_swapToRatioDryrun(
+            estimation,
+            context,
+            targetBase,
+            targetQuote,
+            feeNumerator,
+            feeDenominator
+        );
+    }
+
+    function testFuzz_addLiquidityDryrun(
+        Estimator.Estimation memory estimation,
+        Estimator.EstimationContext memory context,
+        uint256 reserveBaseInvariant
+    ) public {
+        assume_addLiquidityDryrun(
+            estimation,
+            context,
+            reserveBaseInvariant,
+            vm.assume
+        );
+
+        estimation = estimator.exposed_addLiquidityDryrun(
+            estimation,
+            context,
+            reserveBaseInvariant
+        );
+    }
+
+    function testFuzz_estimate(
+        uint8 targetBase,
+        uint8 targetQuote
+    ) public view {
+        vm.assume(targetBase > 0 && targetQuote > 0);
+
+        estimator.estimate(targetBase, targetQuote);
+    }
 }
