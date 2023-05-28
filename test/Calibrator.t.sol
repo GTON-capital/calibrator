@@ -1,20 +1,18 @@
 pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 import {ERC20PresetFixedSupply} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol";
-import {Calibrator} from "../contracts/Calibrator.sol";
-import {Estimator} from "../contracts/Estimator.sol";
-import {Calculate} from "../contracts/libraries/Calculate.sol";
-import {IFactory} from "../contracts/interfaces/IFactory.sol";
-import {IPair} from "../contracts/interfaces/IPair.sol";
+import {Calibrator} from "contracts/Calibrator.sol";
+import {Estimator} from "contracts/Estimator.sol";
+import {Calculate} from "contracts/libraries/Calculate.sol";
+import {IFactory} from "contracts/interfaces/IFactory.sol";
+import {IPair} from "contracts/interfaces/IPair.sol";
 // prettier-ignore
 import {
     assume_removeLiquidity,
     assume_swapToRatio,
     assume_addLiquidity,
-    assume_estimate,
-        assume_estimate_fail
+    assume_estimate
 } from "test/shared/Assume.sol";
 
 contract CalibratorTestHarness is Calibrator {
@@ -110,7 +108,7 @@ contract CalibratorTest is Test {
 
         calibrator.setRatio(167, 1);
 
-        (uint256 reserveBase, ) = calibrator.getRatio();
+        (uint256 reserveBase, ) = calibrator.getReserves();
 
         assertEq(reserveBase, 2474195218611459158903569);
     }
@@ -128,7 +126,7 @@ contract CalibratorTest is Test {
     }
 
     function test_swapToRatio(uint256 targetBase, uint256 targetQuote) public {
-        (uint256 reserveBase, uint256 reserveQuote) = calibrator.getRatio();
+        (uint256 reserveBase, uint256 reserveQuote) = calibrator.getReserves();
 
         assume_swapToRatio(
             reserveBase,
@@ -159,8 +157,28 @@ contract CalibratorTest is Test {
         calibrator.exposed_swapToRatio(targetBase, targetQuote);
     }
 
+    function test_addLiquidity_idleEqual() public {
+        (uint256 reserveBase, ) = calibrator.getReserves();
+
+        calibrator.exposed_addLiquidity(reserveBase);
+
+        (uint256 reserveBaseNew, ) = calibrator.getReserves();
+
+        assertEq(reserveBase, reserveBaseNew);
+    }
+
+    function test_addLiquidity_idleSmall() public {
+        (uint256 reserveBase, ) = calibrator.getReserves();
+
+        calibrator.exposed_addLiquidity(reserveBase + 1);
+
+        (uint256 reserveBaseNew, ) = calibrator.getReserves();
+
+        assertEq(reserveBase, reserveBaseNew);
+    }
+
     function testFuzz_addLiquidity(uint256 reserveBaseInvariant) public {
-        (uint256 reserveBase, uint256 reserveQuote) = calibrator.getRatio();
+        (uint256 reserveBase, uint256 reserveQuote) = calibrator.getReserves();
 
         assume_addLiquidity(
             reserveBase,
@@ -169,15 +187,7 @@ contract CalibratorTest is Test {
             vm.assume
         );
 
-        tokenBase.transfer(
-            address(calibrator),
-            tokenBase.balanceOf(address(this))
-        );
-
-        tokenQuote.transfer(
-            address(calibrator),
-            tokenQuote.balanceOf(address(this))
-        );
+        vm.assume(reserveBaseInvariant != reserveBase);
 
         (uint256 addedBase, uint256 addedQuote) = Calculate.addLiquidity(
             reserveBase,
@@ -185,41 +195,28 @@ contract CalibratorTest is Test {
             reserveBaseInvariant
         );
 
-        vm.assume(addedBase <= tokenBase.balanceOf(address(calibrator)));
+        vm.assume(addedQuote > 0);
 
-        vm.assume(addedQuote <= tokenQuote.balanceOf(address(calibrator)));
+        vm.assume(addedBase <= tokenBase.balanceOf(address(this)));
+
+        vm.assume(addedQuote <= tokenQuote.balanceOf(address(this)));
+
+        tokenBase.transfer(address(calibrator), addedBase);
+
+        // transfer a bit so some cases pass without taking quote from vault
+        tokenQuote.transfer(address(calibrator), 10 ** 21);
 
         calibrator.exposed_addLiquidity(reserveBaseInvariant);
     }
 
     function testFuzz_setRatio(uint256 targetBase, uint256 targetQuote) public {
-        (uint256 reserveBase, ) = calibrator.getRatio();
+        (uint256 reserveBase, ) = calibrator.getReserves();
 
         uint256 availableQuote = tokenQuote.balanceOf(address(this)) +
             tokenQuote.balanceOf(address(pair));
 
         // ERC20: insufficient allowance
         assume_estimate(
-            reserveBase,
-            availableQuote,
-            targetBase,
-            targetQuote,
-            vm.assume
-        );
-
-        calibrator.setRatio(targetBase, targetQuote);
-    }
-
-    function testFailFuzz_setRatio(
-        uint256 targetBase,
-        uint256 targetQuote
-    ) public {
-        (uint256 reserveBase, ) = calibrator.getRatio();
-
-        uint256 availableQuote = tokenQuote.balanceOf(address(this)) +
-            tokenQuote.balanceOf(address(pair));
-
-        assume_estimate_fail(
             reserveBase,
             availableQuote,
             targetBase,

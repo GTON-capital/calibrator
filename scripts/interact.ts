@@ -38,7 +38,7 @@ async function main() {
         "Calibrator"
     )).attach(addressCalibrator);
 
-    const [reserveBase, reserveQuote] = await calibrator.getRatio()
+    const [reserveBase, reserveQuote] = await calibrator.getReserves()
 
     console.log(reserveBase, reserveQuote);
 

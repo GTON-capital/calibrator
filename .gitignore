@@ -13,3 +13,4 @@ cache
 artifacts
 /lcov.info
 /yarn-error.log
+/coverage-forge/

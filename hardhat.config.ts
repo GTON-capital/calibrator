@@ -3,6 +3,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "@xyrusworx/hardhat-solidity-json";
 import "hardhat-abi-exporter";
+import 'solidity-coverage';
 
 import { config } from "dotenv";
 

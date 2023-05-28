@@ -1,12 +1,11 @@
 pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 import {ERC20PresetFixedSupply} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol";
-import {Calibrator} from "../contracts/Calibrator.sol";
-import {Estimator} from "../contracts/Estimator.sol";
-import {IFactory} from "../contracts/interfaces/IFactory.sol";
-import {IPair} from "../contracts/interfaces/IPair.sol";
+import {Calibrator} from "contracts/Calibrator.sol";
+import {Estimator} from "contracts/Estimator.sol";
+import {IFactory} from "contracts/interfaces/IFactory.sol";
+import {IPair} from "contracts/interfaces/IPair.sol";
 // prettier-ignore
 import {
     assume_removeLiquidityDryrun,
@@ -240,7 +239,7 @@ contract CalibratorTest is Test {
     }
 
     function testFuzz_estimate(uint256 targetBase, uint256 targetQuote) public {
-        (uint256 reserveBase, ) = estimator.getRatio();
+        (uint256 reserveBase, ) = estimator.getReserves();
 
         uint256 availableQuote = tokenQuote.balanceOf(address(this)) +
             tokenQuote.balanceOf(address(pair));
@@ -252,6 +251,25 @@ contract CalibratorTest is Test {
             targetQuote,
             vm.assume
         );
+
+        estimator.estimate(targetBase, targetQuote);
+    }
+
+    function test_estimate_failBase() public {
+        uint256 targetBase = 9897342220648777673423918972810742401;
+
+        uint256 targetQuote = 1;
+
+        vm.expectRevert("swapToRatioDryrun: not enough base");
+        estimator.estimate(targetBase, targetQuote);
+    }
+
+    function test_estimate_failQuote() public {
+        uint256 targetBase = 1;
+
+        uint256 targetQuote = 1001463710721174994549;
+
+        vm.expectRevert("swapToRatioDryrun: not enough quote");
 
         estimator.estimate(targetBase, targetQuote);
     }

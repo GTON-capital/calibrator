@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IPair.sol";
 
-contract Base is Ownable {
+contract Settings is Ownable {
     IPair public pair;
     IERC20 public tokenBase;
     IERC20 public tokenQuote;
@@ -54,7 +54,7 @@ contract Base is Ownable {
     }
 
     // retrieve current pool ratio
-    function getRatio() public view returns (uint256 ratioBase, uint256 ratioQuote) {
+    function getReserves() public view returns (uint256 ratioBase, uint256 ratioQuote) {
         (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
 
         (address token0,) = sortTokens(address(tokenBase), address(tokenQuote));

@@ -144,7 +144,7 @@ async function main() {
         
         await tokenQuote.approve(calibrator.address, quoteBalance);
 
-        const [reserveBaseBefore, reserveQuoteBefore] = await calibrator.getRatio();
+        const [reserveBaseBefore, reserveQuoteBefore] = await calibrator.getReserves();
 
         console.log(`\n\nCalibrator - Test ${i + 1} (${testCase}):`);
         console.log({
@@ -172,7 +172,7 @@ async function main() {
 
         const liquidityBalanceAfter = await pair.balanceOf(vault.address);
         
-        const [reserveBaseAfter, reserveQuoteAfter] = await calibrator.getRatio();
+        const [reserveBaseAfter, reserveQuoteAfter] = await calibrator.getReserves();
 
         console.log({
             ratio: tslaRate(reserveBaseAfter, reserveQuoteAfter),

@@ -1,32 +1,33 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IPair.sol";
-import "./libraries/Calculate.sol";
-import "./Base.sol";
-import "./Estimator.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import {IPair} from "./interfaces/IPair.sol";
+import {Calculate} from "./libraries/Calculate.sol";
+import {Settings} from "./Settings.sol";
+import {Estimator} from "./Estimator.sol";
 
-contract Calibrator is Base, Estimator {
-    constructor(address _pair, address _tokenBase, address _tokenQuote) Base(_pair, _tokenBase, _tokenQuote) {}
+contract Calibrator is Settings, Estimator {
+    constructor(address _pair, address _tokenBase, address _tokenQuote) Settings(_pair, _tokenBase, _tokenQuote) {}
 
     function setRatio(uint256 targetBase, uint256 targetQuote) external onlyOwner {
-        (uint256 reserveBaseInvariant,) = getRatio();
+        (uint256 reserveBaseInvariant,) = getReserves();
 
         removeLiquidity(reserveBaseInvariant);
 
-        (uint256 reserveBase, uint256 reserveQuote) = getRatio();
+        (uint256 reserveBase, uint256 reserveQuote) = getReserves();
 
         bool isIdle;
-        bool isPrecise;
+        bool isPrecise = Calculate.checkPrecision(
+                reserveBase, reserveQuote, targetBase, targetQuote, precisionNumerator, precisionDenominator
+            );
 
         while (!isIdle && !isPrecise) {
 
             isIdle = swapToRatio(targetBase, targetQuote);
 
-            (reserveBase, reserveQuote) = getRatio();
+            (reserveBase, reserveQuote) = getReserves();
 
             isPrecise = Calculate.checkPrecision(
                 reserveBase, reserveQuote, targetBase, targetQuote, precisionNumerator, precisionDenominator
@@ -48,7 +49,7 @@ contract Calibrator is Base, Estimator {
     }
 
     function swapToRatio(uint256 targetBase, uint256 targetQuote) internal onlyOwner returns (bool) {
-        (uint256 reserveBase, uint256 reserveQuote) = getRatio();
+        (uint256 reserveBase, uint256 reserveQuote) = getReserves();
 
         (bool baseToQuote, uint256 amountIn, uint256 amountOut) =
             Calculate.swapToRatio(reserveBase, reserveQuote, targetBase, targetQuote, feeNumerator, feeDenominator);
@@ -60,15 +61,15 @@ contract Calibrator is Base, Estimator {
 
         IERC20 tokenIn = baseToQuote ? tokenBase : tokenQuote;
 
-        if (tokenIn.balanceOf(address(this)) < amountIn) {
-            uint256 missingTokenIn = amountIn - tokenIn.balanceOf(address(this));
+        uint256 availableIn = tokenIn.balanceOf(address(this));
 
-            tokenIn.transferFrom(getVault(), address(pair), missingTokenIn);
+        uint256 sentIn = Math.min(availableIn, amountIn);
 
-            tokenIn.transfer(address(pair), tokenIn.balanceOf(address(this)));
-        } else {
-            tokenIn.transfer(address(pair), amountIn);
-        }
+        tokenIn.transfer(address(pair), sentIn);
+
+        uint256 missingIn = amountIn - sentIn;
+
+        tokenIn.transferFrom(getVault(), address(pair), missingIn);
 
         (address token0,) = sortTokens(address(tokenBase), address(tokenQuote));
 
@@ -81,24 +82,27 @@ contract Calibrator is Base, Estimator {
     }
 
     function addLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
-        (uint256 reserveBase, uint256 reserveQuote) = getRatio();
-
-        if (reserveBase == reserveBaseInvariant) return;
+        (uint256 reserveBase, uint256 reserveQuote) = getReserves();
 
         (uint256 addedBase, uint256 addedQuote) =
             Calculate.addLiquidity(reserveBase, reserveQuote, reserveBaseInvariant);
+
+        // when addedBase is very small, addedQuote is 0,
+        // which is not enough to mint liquidity and change reserves
+        // OGX: INSUFFICIENT_LIQUIDITY_MINTED
+        if (addedQuote == 0) return;
 
         tokenBase.transfer(address(pair), addedBase);
 
         uint256 availableQuote = tokenQuote.balanceOf(address(this));
 
-        if (addedQuote > availableQuote) {
-            tokenQuote.transfer(address(pair), availableQuote);
+        uint256 sentQuote = Math.min(availableQuote, addedQuote);
 
-            tokenQuote.transferFrom(getVault(), address(pair), addedQuote - availableQuote);
-        } else {
-            tokenQuote.transfer(address(pair), addedQuote);
-        }
+        tokenQuote.transfer(address(pair), sentQuote);
+
+        uint256 missingQuote = addedQuote - sentQuote;
+
+        tokenQuote.transferFrom(getVault(), address(pair), missingQuote);
 
         pair.mint(address(this));
     }

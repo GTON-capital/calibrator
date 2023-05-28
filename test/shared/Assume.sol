@@ -318,8 +318,9 @@ function assume_estimate(
 ) {
     assume(targetBase > 0 && targetQuote > 0);
 
+    // available base large enough for minimum requiredBase
     // swapToRatioDryrun: not enough base
-    assume(targetBase <= reserveBaseInvariant);
+    assume(reserveBaseInvariant >= targetBase);
 
     assume(mulDivValid(targetQuote, reserveBaseInvariant, targetBase));
 
@@ -329,30 +330,7 @@ function assume_estimate(
         targetBase
     );
 
+    // available quote large enough for minimum requiredQuote
     // swapToRatioDryrun: not enough quote
     assume(availableQuote >= reserveQuoteDesired);
-}
-
-function assume_estimate_fail(
-    uint256 reserveBaseInvariant,
-    uint256 availableQuote,
-    uint256 targetBase,
-    uint256 targetQuote,
-    function(bool) external assume
-) {
-    assume(targetBase > 0 && targetQuote > 0);
-
-    // swapToRatioDryrun: not enough base
-    assume(targetBase <= reserveBaseInvariant);
-
-    assume(mulDivValid(targetQuote, reserveBaseInvariant, targetBase));
-
-    uint256 reserveQuoteDesired = Math.mulDiv(
-        targetQuote,
-        reserveBaseInvariant,
-        targetBase
-    );
-
-    // swapToRatioDryrun: not enough quote
-    assume(availableQuote < reserveQuoteDesired);
 }

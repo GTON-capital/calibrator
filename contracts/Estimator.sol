@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./libraries/Calculate.sol";
-import "./Base.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Calculate} from "./libraries/Calculate.sol";
+import {Settings} from "./Settings.sol";
 
-abstract contract Estimator is Base {
+abstract contract Estimator is Settings {
     struct Estimation {
         bool baseToQuote;
         uint256 requiredQuote;
@@ -26,7 +26,7 @@ abstract contract Estimator is Base {
     function estimate(uint256 targetBase, uint256 targetQuote) external view returns (Estimation memory estimation) {
         EstimationContext memory context;
 
-        (estimation.reserveBase, estimation.reserveQuote) = getRatio();
+        (estimation.reserveBase, estimation.reserveQuote) = getReserves();
 
         uint256 reserveBaseInvariant = estimation.reserveBase;
 
@@ -37,7 +37,13 @@ abstract contract Estimator is Base {
         (estimation, context) = removeLiquidityDryrun(estimation, context, minimumBase);
 
         bool isIdle;
-        bool isPrecise;
+        bool isPrecise = Calculate.checkPrecision(
+                estimation.reserveBase,
+                estimation.reserveQuote,
+                targetBase,
+                targetQuote,
+                precisionNumerator,
+                precisionDenominator);
 
         while (!isIdle && !isPrecise) {
             (estimation, context, isIdle) =
