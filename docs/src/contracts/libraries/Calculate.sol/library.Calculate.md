@@ -1,5 +1,5 @@
 # Calculate
-[Git Source](https://github.com/fetsorn/calibrator/blob/0f389c961061dc866d857aec6275ad5a77652230/contracts/libraries/Calculate.sol)
+[Git Source](https://github.com/fetsorn/calibrator/blob/fae732b2e54a8c19e7be5f987150a473afd2869c/contracts/libraries/Calculate.sol)
 
 **Author:**
 Anton Davydov
@@ -121,14 +121,14 @@ function checkPrecision(
 |`reserveQuote`|`uint256`|The size of quote token reserve in the pool|
 |`targetBase`|`uint256`|The number of base parts in target ratio|
 |`targetQuote`|`uint256`|The number of quote parts in target ratio|
-|`precisionNumerator`|`uint256`|The top of a fraction that represents the acceptable margin of error in a calibration|
-|`precisionDenominator`|`uint256`|The bottom of a fraction that represents the acceptable margin of error in a calibration|
+|`precisionNumerator`|`uint256`|The top of a fraction that represents the acceptable margin of error|
+|`precisionDenominator`|`uint256`|The bottom of a fraction that represents the acceptable margin of error|
 
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|isPrecise Difference between reserve ratio and target ratio is smaller than the acceptable margin of error|
+|`<none>`|`bool`|isPrecise Difference between ratios is smaller than the acceptable margin of error|
 
 
 ### getAmountOut

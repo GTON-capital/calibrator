@@ -1,42 +1,88 @@
-# calibrator
+# Calibrator
 
-Pathway protocol contracts. Set desired price in Uniswap V2 pools.
+Set desired price in Uniswap V2 pools. Inspired by the [Pathway protocol](https://arxiv.org/vc/arxiv/papers/2202/2202.06541v1.pdf).
 
-## Requirements
+## Documentation 📚
 
-* Internet
-* Node >= 18.15.0
-* NPM >= 9.5.0
+Smart contract documentation is [here](./docs/src/SUMMARY.md).
 
-## Quick Start
+The `setRatio(targetBase, targetQuote)` method will burn available liquidity tokens, perform several swaps to move the price, and add liquidity back to the pool. The size of `base` reserve remains constant before and after the calibration. 
 
-1. Prepare `.env` file from `.env.example` template
-2. Run `npm i`
-3. Run `npm run compile`
-4. Run `npm test`
+The `estimate(targetBase, targetQuote)` method will report resources required for calibration.
 
-## Common
-```console
-# install node modules
-npm i
+## Developer Information and Tools 👩‍💻
 
-# compile contract
-npm run compile
+### Install dependencies 👷‍♂️
 
-# run tests
-npm run test
+> **Note**
+> If you use [nix](https://nixos.org/), run `nix develop` to install all dependencies in PATH
 
-# put private key to .env
-# PRIVATE_KEY=0xabc..abc
+You'll need to install nodejs >= 18.15.0. We use yarn but npm should work too. You'll also need to install [foundry](https://book.getfoundry.sh/getting-started/installation#using-foundryup) and [solc](https://github.com/crytic/solc-select). Assuming that's done, run `yarn` with no args:
 
-# deploy pool and Calibrator
-npm run hardhat scripts/deploy --network gtonTestnet
-
-# solidity compiler uses viaIR optimizer
-# this allows to have a lot of variables in the code
-# but makes verification a bit difficult
-# get json metadata
-npm run hardhat solidity-json
-# choose Standard-Json-Input in explorer verification,
-# upload json from artifacts/solidity-json/contracts/Calibrator.sol.json
 ```
+yarn
+```
+
+### Build the code 🧐
+
+To compile the contracts:
+
+```
+yarn compile
+```
+
+### Run tests 🦾
+
+To run both foundry and hardhat tests:
+
+```
+yarn test
+```
+
+### Running the linter 🧽
+
+To run the linter in the default mode, where it will print all errors and not modify code, run:
+
+```
+yarn lint
+```
+
+### Coverage 🔎
+
+We use the [solidity-coverage](https://github.com/sc-forks/solidity-coverage) package to generate coverage reports for hardhat in `coverage/` and [forge coverage](https://book.getfoundry.sh/reference/forge/forge-coverage) for foundry tests in `coverage-foundry`.
+You can generate the coverage reports locally by running:
+
+```
+yarn coverage
+yarn hardhat coverage
+```
+
+The full reports can be viewed by opening the `coverage/index.html` and `coverage-foundry/index.html` files in a browser.
+
+### Deploy and interact 🚀
+
+Enter your private key to the `.env` file from `.env.example` template. Double-check the deploy script and run:
+
+```
+yarn hardhat scripts/deploy.js
+```
+
+You can deploy to your network of choice by modifying `hardhat.config.ts` and adding the flag `--network yourNetwork` to the invocation.
+
+```
+    yourNetwork: {
+      url: "https://example.com",
+      accounts: [PRIVATE_KEY],
+    },
+
+```
+
+### Verify 📄
+
+To verify the source code with a network explorer, it's best to generate json metadata.
+
+```
+yarn hardhat solidity-json
+```
+
+Choose `Standard-Json-Input` in the explorer verification dialog and upload json from `artifacts/solidity-json/contracts/Calibrator.sol.json`.

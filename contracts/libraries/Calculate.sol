@@ -149,9 +149,9 @@ library Calculate {
     /// @param reserveQuote The size of quote token reserve in the pool
     /// @param targetBase The number of base parts in target ratio
     /// @param targetQuote The number of quote parts in target ratio
-    /// @param precisionNumerator The top of a fraction that represents the acceptable margin of error in a calibration
-    /// @param precisionDenominator The bottom of a fraction that represents the acceptable margin of error in a calibration
-    /// @return isPrecise Difference between reserve ratio and target ratio is smaller than the acceptable margin of error
+    /// @param precisionNumerator The top of a fraction that represents the acceptable margin of error
+    /// @param precisionDenominator The bottom of a fraction that represents the acceptable margin of error
+    /// @return isPrecise Difference between ratios is smaller than the acceptable margin of error
     function checkPrecision(
         uint256 reserveBase,
         uint256 reserveQuote,

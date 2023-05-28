@@ -33,6 +33,8 @@
         devShell = with pkgs;
           mkShell {
             buildInputs = [
+              nodejs
+              yarn
               # From the foundry overlay
               # Note: Can also be referenced without overlaying as: foundry.defaultPackage.${system}
               foundry-bin
