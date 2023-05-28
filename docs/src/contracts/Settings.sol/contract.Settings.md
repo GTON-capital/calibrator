@@ -1,5 +1,5 @@
 # Settings
-[Git Source](https://github.com/fetsorn/calibrator/blob/0894a0d3a5b73c958dafd617d3c524ce6baed179/contracts/Settings.sol)
+[Git Source](https://github.com/fetsorn/calibrator/blob/9766b8c2977994f0bd982007b8984957edaaef90/contracts/Settings.sol)
 
 **Inherits:**
 Ownable
@@ -65,6 +65,8 @@ uint256 public feeDenominator = 1000;
 
 ### precisionNumerator
 The top of a fraction that represents the acceptable margin of error in a calibration
+
+*when the error margin fraction is large, less swaps are performed, and precision is lower*
 
 
 ```solidity
@@ -230,4 +232,39 @@ function sortTokens(address tokenA, address tokenB) internal pure returns (addre
 |`token0`|`address`|The address of the first token in order|
 |`token1`|`address`|The address of the last token in order|
 
+
+## Events
+### SetFee
+Emits when the net swap fraction is updated
+
+*Call this to setup a fork with alternative fees*
+
+
+```solidity
+event SetFee(uint256 indexed feeNumerator, uint256 indexed feeDenominator);
+```
+
+### SetPrecision
+Emits when acceptable margin of calibration error is updated
+
+
+```solidity
+event SetPrecision(uint256 indexed precisionNumerator, uint256 indexed precisionDenominator);
+```
+
+### SetMinimumBase
+Emits when the minimum size of the base reserve is updated
+
+
+```solidity
+event SetMinimumBase(uint256 indexed minimumBase);
+```
+
+### SetVault
+Emits when new vault is set
+
+
+```solidity
+event SetVault(address indexed vault);
+```
 

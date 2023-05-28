@@ -23,6 +23,7 @@ contract Settings is Ownable {
     uint256 public feeDenominator = 1000;
 
     /// @notice The top of a fraction that represents the acceptable margin of error in a calibration
+    /// @dev when the error margin fraction is large, less swaps are performed, and precision is lower
     uint256 public precisionNumerator = 1;
     /// @notice The bottom of a fraction that represents the acceptable margin of error in a calibration
     uint256 public precisionDenominator = 1000;
@@ -35,6 +36,25 @@ contract Settings is Ownable {
     /// @dev When vault is 0, msg.sender is considered the vault
     /// @dev Vault is expected to approve a large allowance to this contract
     address public vault = address(0);
+
+    /// @notice Emits when the net swap fraction is updated
+    /// @dev Call this to setup a fork with alternative fees
+    /// @param feeNumerator The top of a fraction that represents swap size minus fees
+    /// @param feeDenominator The bottom of a fraction that represents swap size minus fees
+    event SetFee(uint256 indexed feeNumerator, uint256 indexed feeDenominator);
+
+    /// @notice Emits when acceptable margin of calibration error is updated
+    /// @param precisionNumerator The top of a fraction that represents the acceptable margin of error in a calibration
+    /// @param precisionDenominator The bottom of a fraction that represents the acceptable margin of error in a calibration
+    event SetPrecision(uint256 indexed precisionNumerator, uint256 indexed precisionDenominator);
+
+    /// @notice Emits when the minimum size of the base reserve is updated
+    /// @param minimumBase The size of the base reserve after liquidity removal
+    event SetMinimumBase(uint256 indexed minimumBase);
+
+    /// @notice Emits when new vault is set
+    /// @param vault The address of the vault that holds pair and ERC20 tokens
+    event SetVault(address indexed vault);
 
     constructor(address _pair, address _tokenBase, address _tokenQuote) {
         pair = IPair(_pair);

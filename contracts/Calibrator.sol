@@ -14,7 +14,7 @@ contract Calibrator is Settings, Estimator {
     /// @notice Emits at the start of calibration
     /// @param targetBase The number of base parts in target ratio
     /// @param targetQuote The number of quote parts in target ratio
-    /// @param The address of the vault that holds pair and ERC20 tokens
+    /// @param vault The address of the vault that holds pair and ERC20 tokens
     event SetRatio(uint256 indexed targetBase, uint256 indexed targetQuote, address indexed vault);
 
     /// @notice Emits after liquidity removal

@@ -64,7 +64,7 @@ The full reports can be viewed by opening the `coverage/index.html` and `coverag
 Enter your private key to the `.env` file from `.env.example` template. Double-check the deploy script and run:
 
 ```
-yarn hardhat scripts/deploy.js
+yarn hardhat run scripts/deploy.js
 ```
 
 You can deploy to your network of choice by modifying `hardhat.config.ts` and adding the flag `--network yourNetwork` to the invocation.
