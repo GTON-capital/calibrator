@@ -1,5 +1,5 @@
 # Estimator
-[Git Source](https://github.com/fetsorn/calibrator/blob/9766b8c2977994f0bd982007b8984957edaaef90/contracts/Estimator.sol)
+[Git Source](https://github.com/fetsorn/calibrator/blob/7a7ddb105b97e75ab963befd255e951fec0df100/contracts/Estimator.sol)
 
 **Inherits:**
 [Settings](/contracts/Settings.sol/contract.Settings.md)

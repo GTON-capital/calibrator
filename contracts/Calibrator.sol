@@ -117,7 +117,9 @@ contract Calibrator is Settings, Estimator {
 
         uint256 missingIn = amountIn - sentIn;
 
-        tokenIn.transferFrom(getVault(), address(pair), missingIn);
+        if (missingIn > 0) {
+            tokenIn.transferFrom(getVault(), address(pair), missingIn);
+        }
 
         (address token0,) = sortTokens(address(tokenBase), address(tokenQuote));
 
@@ -156,7 +158,9 @@ contract Calibrator is Settings, Estimator {
 
         uint256 missingQuote = addedQuote - sentQuote;
 
-        tokenQuote.transferFrom(getVault(), address(pair), missingQuote);
+        if (missingQuote > 0) {
+            tokenQuote.transferFrom(getVault(), address(pair), missingQuote);
+        }
 
         uint256 mintedLiquidity = pair.mint(address(this));
 
@@ -166,11 +170,23 @@ contract Calibrator is Settings, Estimator {
     }
 
     /// @notice Transfer all tokens to the vault
-    function reclaim() internal onlyOwner {
-        pair.transfer(getVault(), pair.balanceOf(address(this)));
+    function reclaim() public onlyOwner {
+        uint256 balancePair = pair.balanceOf(address(this));
 
-        tokenBase.transfer(getVault(), tokenBase.balanceOf(address(this)));
+        if (balancePair > 0) {
+            pair.transfer(getVault(), balancePair);
+        }
 
-        tokenQuote.transfer(getVault(), tokenQuote.balanceOf(address(this)));
+        uint256 balanceBase = tokenBase.balanceOf(address(this));
+
+        if (balanceBase > 0) {
+            tokenBase.transfer(getVault(), balanceBase);
+        }
+
+        uint256 balanceQuote = tokenQuote.balanceOf(address(this));
+
+        if (balanceQuote > 0) {
+            tokenQuote.transfer(getVault(), balanceQuote);
+        }
     }
 }
