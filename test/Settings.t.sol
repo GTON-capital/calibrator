@@ -93,16 +93,28 @@ contract CalibratorTest is Test {
     ) public {
         vm.assume(feeDenominator > 0);
 
+        vm.assume(feeNumerator <= feeDenominator);
+
         settings.setFee(feeNumerator, feeDenominator);
 
         assertEq(settings.feeNumerator(), feeNumerator);
         assertEq(settings.feeDenominator(), feeDenominator);
     }
 
-    function testFuzz_setFee_revert(uint256 feeNumerator) public {
+    function testFuzz_setFee_revertZero(uint256 feeNumerator) public {
         uint256 feeDenominator = 0;
 
-        vm.expectRevert("setFee: feeDenominator>0");
+        vm.expectRevert("setFee: division by 0");
+
+        settings.setFee(feeNumerator, feeDenominator);
+    }
+
+    function testFuzz_setFee_revertImproper(uint256 feeNumerator, uint256 feeDenominator) public {
+        vm.assume(feeDenominator > 0);
+
+        vm.assume(feeNumerator > feeDenominator);
+
+        vm.expectRevert("setFee: improper fraction");
 
         settings.setFee(feeNumerator, feeDenominator);
     }
@@ -113,16 +125,28 @@ contract CalibratorTest is Test {
     ) public {
         vm.assume(precisionDenominator > 0);
 
+        vm.assume(precisionNumerator <= precisionDenominator);
+
         settings.setPrecision(precisionNumerator, precisionDenominator);
 
         assertEq(settings.precisionNumerator(), precisionNumerator);
         assertEq(settings.precisionDenominator(), precisionDenominator);
     }
 
-    function testFuzz_setPrecision_revert(uint256 precisionNumerator) public {
+    function testFuzz_setPrecision_revertZero(uint256 precisionNumerator) public {
         uint256 precisionDenominator = 0;
 
-        vm.expectRevert("setPrecision: precisionDenominator>0");
+        vm.expectRevert("setPrecision: division by 0");
+
+        settings.setPrecision(precisionNumerator, precisionDenominator);
+    }
+
+    function testFuzz_setPrecision_revertImproper(uint256 precisionNumerator, uint256 precisionDenominator) public {
+        vm.assume(precisionDenominator > 0);
+
+        vm.assume(precisionNumerator > precisionDenominator);
+
+        vm.expectRevert("setPrecision: improper fraction");
 
         settings.setPrecision(precisionNumerator, precisionDenominator);
     }

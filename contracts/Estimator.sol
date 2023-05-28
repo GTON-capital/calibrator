@@ -5,7 +5,10 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Calculate} from "./libraries/Calculate.sol";
 import {Settings} from "./Settings.sol";
 
+/// @title Estimates resources required to change pool reserve ratio
+/// @author Anton Davydov
 abstract contract Estimator is Settings {
+    /// @notice Information about the simulated calibration
     struct Estimation {
         bool baseToQuote;
         uint256 requiredQuote;
@@ -15,6 +18,7 @@ abstract contract Estimator is Settings {
         uint256 reserveQuote;
     }
 
+    /// @notice Intermediary state of the calibration
     struct EstimationContext {
         uint256 availableQuote;
         uint256 availableBase;
@@ -23,6 +27,10 @@ abstract contract Estimator is Settings {
         uint256 vaultLiquidity;
     }
 
+    /// @notice Simulate a reserve ratio calibration
+    /// @param targetBase The number of base parts in target ratio
+    /// @param targetQuote The number of quote parts in target ratio
+    /// @return estimation Information about the simulated calibration
     function estimate(uint256 targetBase, uint256 targetQuote) external view returns (Estimation memory estimation) {
         EstimationContext memory context;
 
@@ -61,6 +69,12 @@ abstract contract Estimator is Settings {
         estimation = addLiquidityDryrun(estimation, context, reserveBaseInvariant);
     }
 
+    /// @notice Simulate a removal of liquidity from the pool
+    /// @param estimation Information about the simulated calibration
+    /// @param context Intermediary state of the calibration
+    /// @param minimumBase The size of base reserve after removal
+    /// @return estimationNew Information about the simulated calibration
+    /// @return contextNew Intermediary state of the calibration
     function removeLiquidityDryrun(Estimation memory estimation, EstimationContext memory context, uint256 minimumBase)
         internal
         pure
@@ -84,6 +98,15 @@ abstract contract Estimator is Settings {
         return (estimation, context);
     }
 
+    /// @notice Simulate a swap that changes pool ratio
+    /// @param estimation Information about the simulated calibration
+    /// @param context Intermediary state of the calibration
+    /// @param targetBase The number of base parts in target ratio
+    /// @param targetQuote The number of quote parts in target ratio
+    /// @param feeNumerator The top of a fraction that represents swap size minus fees
+    /// @param feeDenominator The bottom of a fraction that represents swap size minus fees
+    /// @return estimationNew Information about the simulated calibration
+    /// @return contextNew Intermediary state of the calibration
     function swapToRatioDryrun(
         Estimation memory estimation,
         EstimationContext memory context,
@@ -118,6 +141,11 @@ abstract contract Estimator is Settings {
         return (estimation, context, false);
     }
 
+    /// @notice Simulate addition of liquidity to reach invariant base reserve
+    /// @param estimation Information about the simulated calibration
+    /// @param context Intermediary state of the calibration
+    /// @param reserveBaseInvariant The target size of base reserve
+    /// @return estimationNew Information about the simulated calibration
     function addLiquidityDryrun(
         Estimation memory estimation,
         EstimationContext memory context,

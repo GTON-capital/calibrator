@@ -22,8 +22,8 @@ contract CalibratorTestHarness is Calibrator {
         address _tokenQuote
     ) Calibrator(_pair, _tokenBase, _tokenQuote) {}
 
-    function exposed_removeLiquidity(uint256 reserveBaseInvariant) external {
-        return removeLiquidity(reserveBaseInvariant);
+    function exposed_removeLiquidity() external {
+        return removeLiquidity();
     }
 
     function exposed_swapToRatio(
@@ -113,16 +113,18 @@ contract CalibratorTest is Test {
         assertEq(reserveBase, 2474195218611459158903569);
     }
 
-    function testFuzz_removeLiquidity(uint256 reserveBaseInvariant) public {
+    function testFuzz_removeLiquidity() public {
+        (uint256 reserveBase, ) = calibrator.getReserves();
+
         assume_removeLiquidity(
-            reserveBaseInvariant,
+            reserveBase,
             calibrator.minimumBase(),
             pair.balanceOf(address(this)),
             pair.totalSupply(),
             vm.assume
         );
 
-        calibrator.exposed_removeLiquidity(reserveBaseInvariant);
+        calibrator.exposed_removeLiquidity();
     }
 
     function test_swapToRatio(uint256 targetBase, uint256 targetQuote) public {

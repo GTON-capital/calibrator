@@ -8,13 +8,18 @@ import {Calculate} from "./libraries/Calculate.sol";
 import {Settings} from "./Settings.sol";
 import {Estimator} from "./Estimator.sol";
 
+/// @title Changes ratio of pool reserves
+/// @author Anton Davydov
 contract Calibrator is Settings, Estimator {
     constructor(address _pair, address _tokenBase, address _tokenQuote) Settings(_pair, _tokenBase, _tokenQuote) {}
 
+    /// @notice Change pool reserves to match target ratio
+    /// @param targetBase The number of base parts in target ratio
+    /// @param targetQuote The number of quote parts in target ratio
     function setRatio(uint256 targetBase, uint256 targetQuote) external onlyOwner {
         (uint256 reserveBaseInvariant,) = getReserves();
 
-        removeLiquidity(reserveBaseInvariant);
+        removeLiquidity();
 
         (uint256 reserveBase, uint256 reserveQuote) = getReserves();
 
@@ -39,15 +44,22 @@ contract Calibrator is Settings, Estimator {
         reclaim();
     }
 
-    function removeLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
+    /// @notice Remove liquidity from the pool for smaller swaps
+    function removeLiquidity() internal onlyOwner {
+        (uint256 reserveBase,) = getReserves();
+
         (, uint256 removedLiquidity) =
-            Calculate.removeLiquidity(reserveBaseInvariant, minimumBase, pair.balanceOf(getVault()), pair.totalSupply());
+            Calculate.removeLiquidity(reserveBase, minimumBase, pair.balanceOf(getVault()), pair.totalSupply());
 
         pair.transferFrom(getVault(), address(pair), removedLiquidity);
 
         pair.burn(address(this));
     }
 
+    /// @notice Swap to move reserves in the direction of target ratio
+    /// @param targetBase The number of base parts in target ratio
+    /// @param targetQuote The number of quote parts in target ratio
+    /// @return isIdle Did not swap
     function swapToRatio(uint256 targetBase, uint256 targetQuote) internal onlyOwner returns (bool) {
         (uint256 reserveBase, uint256 reserveQuote) = getReserves();
 
@@ -81,6 +93,8 @@ contract Calibrator is Settings, Estimator {
         return false;
     }
 
+    /// @notice Add liquidity to reach invariant base reserve
+    /// @param reserveBaseInvariant The target size of base reserve
     function addLiquidity(uint256 reserveBaseInvariant) internal onlyOwner {
         (uint256 reserveBase, uint256 reserveQuote) = getReserves();
 
@@ -107,6 +121,7 @@ contract Calibrator is Settings, Estimator {
         pair.mint(address(this));
     }
 
+    /// @notice Transfer all tokens to the vault
     function reclaim() internal onlyOwner {
         pair.transfer(getVault(), pair.balanceOf(address(this)));
 

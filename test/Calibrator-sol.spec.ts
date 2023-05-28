@@ -6,7 +6,7 @@ import { Calibrator, IERC20, IPair } from "~/typechain-types"
 
 import { calibratorFixture } from "./shared/fixtures"
 import { expect } from "./shared/expect"
-import { TestCase, simpleCases, realCases } from "./cases"
+import { TestCase, simpleCases, realCases } from "./snapshots"
 
 describe("Calibrator", () => {
   const [wallet, other, vault] = waffle.provider.getWallets()

@@ -153,19 +153,22 @@ function assume_checkPrecision(
     uint256 precisionDenominator,
     function(bool) external assume
 ) {
-    assume(mulValid(targetQuote, precisionDenominator));
+    (
+        uint256 reserveA,
+        uint256 reserveB,
+        uint256 targetA,
+        uint256 targetB
+    ) = reserveBase > reserveQuote
+            ? (reserveBase, reserveQuote, targetBase, targetQuote)
+            : (reserveQuote, reserveBase, targetQuote, targetBase);
 
-    assume(
-        mulDivValid(
-            reserveBase,
-            targetQuote * precisionDenominator,
-            reserveQuote
-        )
-    );
+    assume(mulDivValid(reserveA, precisionDenominator, reserveB));
 
-    assume(mulValid(targetBase, precisionDenominator));
+    assume(mulDivValid(targetA, precisionDenominator, targetB));
 
-    assume(addValid(targetBase * precisionDenominator, precisionNumerator));
+    uint256 targetRatioDP = Math.mulDiv(targetA, precisionDenominator, targetB);
+
+    assume(addValid(targetRatioDP, precisionNumerator));
 }
 
 function assume_getAmountOut(
