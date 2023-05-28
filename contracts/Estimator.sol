@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -54,6 +54,7 @@ abstract contract Estimator is Settings {
                 precisionDenominator);
 
         while (!isIdle && !isPrecise) {
+            // returns `isIdle=true` if swap doesn't change state, avoiding infinite while loop
             (estimation, context, isIdle) =
                 swapToRatioDryrun(estimation, context, targetBase, targetQuote, feeNumerator, feeDenominator);
 
@@ -141,7 +142,7 @@ abstract contract Estimator is Settings {
         return (estimation, context, false);
     }
 
-    /// @notice Simulate addition of liquidity to reach invariant base reserve
+    /// @notice Simulate provision of liquidity that reaches invariant size of base reserve
     /// @param estimation Information about the simulated calibration
     /// @param context Intermediary state of the calibration
     /// @param reserveBaseInvariant The target size of base reserve

@@ -1,5 +1,5 @@
 # Calibrator
-[Git Source](https://github.com/fetsorn/calibrator/blob/fae732b2e54a8c19e7be5f987150a473afd2869c/contracts/Calibrator.sol)
+[Git Source](https://github.com/fetsorn/calibrator/blob/0894a0d3a5b73c958dafd617d3c524ce6baed179/contracts/Calibrator.sol)
 
 **Inherits:**
 [Settings](/contracts/Settings.sol/contract.Settings.md), [Estimator](/contracts/Estimator.sol/abstract.Estimator.md)
@@ -85,5 +85,38 @@ Transfer all tokens to the vault
 
 ```solidity
 function reclaim() internal onlyOwner;
+```
+
+## Events
+### SetRatio
+Emits at the start of calibration
+
+
+```solidity
+event SetRatio(uint256 indexed targetBase, uint256 indexed targetQuote, address indexed vault);
+```
+
+### RemoveLiquidity
+Emits after liquidity removal
+
+
+```solidity
+event RemoveLiquidity(uint256 indexed minimumBase, uint256 reserveBase, uint256 reserveQuote, uint256 removedLiquidity);
+```
+
+### SwapToRatio
+Emits after a ratio change
+
+
+```solidity
+event SwapToRatio(bool indexed isIdle, uint256 reserveBase, uint256 reserveQuote, uint256 missingIn);
+```
+
+### AddLiquidity
+Emits after liquidity provision
+
+
+```solidity
+event AddLiquidity(uint256 reserveBase, uint256 reserveQuote, uint256 missingQuote, uint256 mintedLiquidity);
 ```
 

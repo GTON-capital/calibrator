@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -11,12 +11,41 @@ import {Estimator} from "./Estimator.sol";
 /// @title Changes ratio of pool reserves
 /// @author Anton Davydov
 contract Calibrator is Settings, Estimator {
+    /// @notice Emits at the start of calibration
+    /// @param targetBase The number of base parts in target ratio
+    /// @param targetQuote The number of quote parts in target ratio
+    /// @param The address of the vault that holds pair and ERC20 tokens
+    event SetRatio(uint256 indexed targetBase, uint256 indexed targetQuote, address indexed vault);
+
+    /// @notice Emits after liquidity removal
+    /// @param minimumBase The target size of the base reserve
+    /// @param reserveBase The size of base token reserve after removal
+    /// @param reserveQuote The size of quote token reserve after removal
+    /// @param removedLiquidity Amount of burned liquidity tokens
+    event RemoveLiquidity(uint256 indexed minimumBase, uint256 reserveBase, uint256 reserveQuote, uint256 removedLiquidity);
+
+    /// @notice Emits after a ratio change
+    /// @param isIdle Did not swap
+    /// @param reserveBase The size of base token reserve after ratio change
+    /// @param reserveQuote The size of quote token reserve after ratio change
+    /// @param missingIn Amount of tokens transfered from vault
+    event SwapToRatio(bool indexed isIdle, uint256 reserveBase, uint256 reserveQuote, uint256 missingIn);
+
+    /// @notice Emits after liquidity provision
+    /// @param reserveBase The size of base token reserve after provision
+    /// @param reserveQuote The size of quote token reserve after provision
+    /// @param missingQuote Amount of quote tokens transfered from vault
+    /// @param mintedLiquidity Amount of liquidity tokens minted
+    event AddLiquidity(uint256 reserveBase, uint256 reserveQuote, uint256 missingQuote, uint256 mintedLiquidity);
+
     constructor(address _pair, address _tokenBase, address _tokenQuote) Settings(_pair, _tokenBase, _tokenQuote) {}
 
     /// @notice Change pool reserves to match target ratio
     /// @param targetBase The number of base parts in target ratio
     /// @param targetQuote The number of quote parts in target ratio
     function setRatio(uint256 targetBase, uint256 targetQuote) external onlyOwner {
+        emit SetRatio(targetBase, targetQuote, getVault());
+
         (uint256 reserveBaseInvariant,) = getReserves();
 
         removeLiquidity();
@@ -30,6 +59,7 @@ contract Calibrator is Settings, Estimator {
 
         while (!isIdle && !isPrecise) {
 
+            // returns `isIdle=true` if swap doesn't change state, avoiding infinite while loop
             isIdle = swapToRatio(targetBase, targetQuote);
 
             (reserveBase, reserveQuote) = getReserves();
@@ -46,14 +76,18 @@ contract Calibrator is Settings, Estimator {
 
     /// @notice Remove liquidity from the pool for smaller swaps
     function removeLiquidity() internal onlyOwner {
-        (uint256 reserveBase,) = getReserves();
+        (uint256 reserve,) = getReserves();
 
         (, uint256 removedLiquidity) =
-            Calculate.removeLiquidity(reserveBase, minimumBase, pair.balanceOf(getVault()), pair.totalSupply());
+            Calculate.removeLiquidity(reserve, minimumBase, pair.balanceOf(getVault()), pair.totalSupply());
 
         pair.transferFrom(getVault(), address(pair), removedLiquidity);
 
         pair.burn(address(this));
+
+        (uint256 reserveBase, uint256 reserveQuote) = getReserves();
+
+        emit RemoveLiquidity(minimumBase, reserveBase, reserveQuote, removedLiquidity);
     }
 
     /// @notice Swap to move reserves in the direction of target ratio
@@ -68,6 +102,8 @@ contract Calibrator is Settings, Estimator {
 
         // when reserves are small and desired ratio change is small, no swap is possible
         if (amountIn == 0 || amountOut == 0) {
+            emit SwapToRatio(true, reserveBase, reserveQuote, 0);
+
             return true;
         }
 
@@ -89,6 +125,10 @@ contract Calibrator is Settings, Estimator {
             address(tokenIn) == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
 
         pair.swap(amount0Out, amount1Out, address(this), new bytes(0));
+
+        (reserveBase, reserveQuote) = getReserves();
+
+        emit SwapToRatio(false, reserveBase, reserveQuote, missingIn);
 
         return false;
     }
@@ -118,7 +158,11 @@ contract Calibrator is Settings, Estimator {
 
         tokenQuote.transferFrom(getVault(), address(pair), missingQuote);
 
-        pair.mint(address(this));
+        uint256 mintedLiquidity = pair.mint(address(this));
+
+        (reserveBase, reserveQuote) = getReserves();
+
+        emit AddLiquidity(reserveBase, reserveQuote, missingQuote, mintedLiquidity);
     }
 
     /// @notice Transfer all tokens to the vault
